@@ -1,0 +1,10 @@
+project_id = "yiymlemmsqdklavwgdgt"
+
+[functions.slack-interactions]
+verify_jwt = false
+
+[functions.aimfox-contact-webhook]
+verify_jwt = false
+
+[functions.aimfox-relay]
+verify_jwt = false

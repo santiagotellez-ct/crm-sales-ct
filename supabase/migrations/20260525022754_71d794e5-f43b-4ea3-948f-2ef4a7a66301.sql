@@ -1,0 +1,1 @@
+UPDATE public.deals SET account_executive = 'Toqui' WHERE company_name IN ('Wirbi - AI Summit','Radware','Proqube - CTW','Ombia','Art2Sec','Cyberlossless','Tita Media','AWS - Forbes Connect','Simetrik','Seguros Mundial','Kiggu','Caracol','Llama Invest','Yuno','Grupo UMA','Fullstep','Pancake','HolaGPT','Audi','ADL Digital Lab','Raiz & Co','Traderpal');

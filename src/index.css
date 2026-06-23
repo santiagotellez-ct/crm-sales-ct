@@ -1,0 +1,112 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Colombia Tech brand system. All colors HSL. Display = Mosvita. */
+
+@font-face {
+  font-family: "Mosvita";
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  src: url("/__l5e/assets-v1/478140fd-b921-4dc1-bc83-279e1159d5c6/mosvita-regular.otf") format("opentype");
+}
+@font-face {
+  font-family: "Mosvita";
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+  src: url("/__l5e/assets-v1/81666b37-9cc7-4704-89e5-120eb7bdd9ad/mosvita-semibold.otf") format("opentype");
+}
+@font-face {
+  font-family: "Mosvita";
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+  src: url("/__l5e/assets-v1/8b108832-6e34-43ac-b4bd-ee67429d8344/mosvita-bold.otf") format("opentype");
+}
+@font-face {
+  font-family: "Mosvita";
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+  src: url("/__l5e/assets-v1/b8998ccf-191b-4cb1-815e-caf1b4e2f308/mosvita-extrabold.otf") format("opentype");
+}
+
+@layer base {
+  :root {
+    /* Colombia Tech brand */
+    --brand-black: 60 4% 11%;          /* #1C1C1A */
+    --brand-bone: 45 25% 96%;          /* #F7F6F1 */
+    --brand-yellow: 48 100% 50%;       /* #FFCE00 */
+    --brand-yellow-light: 45 100% 85%; /* #FFEDB5 */
+    --brand-green: 75 100% 44%;        /* #96DF00 */
+    --brand-pink: 300 76% 72%;         /* #EE82EE */
+    --brand-blue: 201 88% 61%;         /* #42B3F3 */
+    --brand-blue-light: 211 100% 82%;  /* #A4D4FF */
+
+    --background: var(--brand-bone);
+    --foreground: var(--brand-black);
+
+    --card: 0 0% 100%;
+    --card-foreground: var(--brand-black);
+
+    --popover: 0 0% 100%;
+    --popover-foreground: var(--brand-black);
+
+    /* Yellow as primary action color. Black text on yellow for legibility. */
+    --primary: var(--brand-yellow);
+    --primary-foreground: var(--brand-black);
+
+    --secondary: 45 18% 90%;
+    --secondary-foreground: var(--brand-black);
+
+    --muted: 45 15% 92%;
+    --muted-foreground: 60 4% 36%;
+
+    --accent: var(--brand-blue);
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 75% 52%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 45 12% 86%;
+    --input: 45 12% 86%;
+    --ring: var(--brand-yellow);
+
+    --radius: 0.5rem;
+
+    --score-high: 75 100% 32%;
+    --score-medium: 48 100% 45%;
+    --score-low: 0 75% 52%;
+
+    --fit-high: 75 100% 32%;
+    --fit-medium: 48 100% 45%;
+    --fit-low: 0 75% 52%;
+
+    --sidebar-background: var(--brand-black);
+    --sidebar-foreground: var(--brand-bone);
+    --sidebar-primary: var(--brand-yellow);
+    --sidebar-primary-foreground: var(--brand-black);
+    --sidebar-accent: 60 4% 18%;
+    --sidebar-accent-foreground: var(--brand-bone);
+    --sidebar-border: 60 4% 22%;
+    --sidebar-ring: var(--brand-yellow);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "ss01", "cv11";
+  }
+
+  h1, h2, h3, .font-display {
+    font-family: "Mosvita", "Inter", system-ui, sans-serif;
+    letter-spacing: -0.01em;
+  }
+}
