@@ -10,8 +10,12 @@ import Duplicates from "./pages/Duplicates.tsx";
 import Meetings from "./pages/Meetings.tsx";
 import Deals from "./pages/Deals.tsx";
 import AeTasks from "./pages/AeTasks.tsx";
+import Login from "./pages/Login.tsx";
+import AdminUsers from "./pages/AdminUsers.tsx";
 import { CompanyDataProvider } from "@/hooks/useCompanyData";
 import { GlobalHeader } from "@/components/GlobalHeader";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { ProtectedRoute, AdminRoute } from "@/components/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
@@ -21,19 +25,39 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <CompanyDataProvider>
-          <GlobalHeader />
+        <AuthProvider>
           <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/tasks" element={<Tasks />} />
-            <Route path="/duplicates" element={<Duplicates />} />
-            <Route path="/meetings" element={<Meetings />} />
-            <Route path="/deals" element={<Deals />} />
-            <Route path="/ae-tasks" element={<AeTasks />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
+            <Route path="/login" element={<Login />} />
+            <Route
+              path="/*"
+              element={
+                <ProtectedRoute>
+                  <CompanyDataProvider>
+                    <GlobalHeader />
+                    <Routes>
+                      <Route path="/" element={<Index />} />
+                      <Route path="/tasks" element={<Tasks />} />
+                      <Route path="/duplicates" element={<Duplicates />} />
+                      <Route path="/meetings" element={<Meetings />} />
+                      <Route path="/deals" element={<Deals />} />
+                      <Route path="/ae-tasks" element={<AeTasks />} />
+                      <Route
+                        path="/admin/users"
+                        element={
+                          <AdminRoute>
+                            <AdminUsers />
+                          </AdminRoute>
+                        }
+                      />
+                      {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
+                  </CompanyDataProvider>
+                </ProtectedRoute>
+              }
+            />
           </Routes>
-        </CompanyDataProvider>
+        </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
