@@ -15,7 +15,6 @@ serve(async (req) => {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) throw new Error("Sin autorización");
 
-    // Verificar que el llamador es admin
     const supabaseUser = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_ANON_KEY")!,
@@ -34,7 +33,6 @@ serve(async (req) => {
     if (profileError || !profile) throw new Error("Perfil no encontrado");
     if (profile.role !== "admin") throw new Error("Solo los administradores pueden crear usuarios");
 
-    // Crear usuario con service role
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!

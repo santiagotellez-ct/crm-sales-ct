@@ -14,6 +14,7 @@ const STATUS_STYLES: Record<CompanyStatus, string> = {
   agendado: "bg-score-high/15 text-score-high border-score-high/30",
   reagendar: "bg-score-medium/15 text-score-medium border-score-medium/30",
   no_answer: "bg-muted text-muted-foreground border-border",
+  no_interesado: "bg-score-low/10 text-score-low border-score-low/25",
   unqualified: "bg-score-low/15 text-score-low border-score-low/30",
   unqualified_post_meeting: "bg-score-low/15 text-score-low border-score-low/30",
 };

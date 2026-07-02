@@ -28,6 +28,7 @@ export type CompanyStatus =
   | "agendado"
   | "reagendar"
   | "no_answer"
+  | "no_interesado"
   | "unqualified"
   | "unqualified_post_meeting";
 
@@ -40,6 +41,7 @@ export const STATUS_LABELS: Record<CompanyStatus, string> = {
   agendado: "Agendado",
   reagendar: "Reagendar",
   no_answer: "No Answer",
+  no_interesado: "No interesado",
   unqualified: "Unqualified",
   unqualified_post_meeting: "Unqualified Post-Reunión",
 };
@@ -53,14 +55,15 @@ export const STATUS_OPTIONS: CompanyStatus[] = [
   "agendado",
   "reagendar",
   "no_answer",
+  "no_interesado",
   "unqualified",
   "unqualified_post_meeting",
 ];
 
 // "Mapi" remains in the union for historical data, but is no longer offered
 // as an assignable SDR.
-export type Sdr = "Jissad" | "Mapi" | "Juan" | "César" | "Self AE";
-export const SDR_OPTIONS: Sdr[] = ["Jissad", "Juan", "César", "Self AE"];
+export type Sdr = "Jissad" | "Mapi" | "Juan" | "César" | "Self AE" | "Dani" | "Majo";
+export const SDR_OPTIONS: Sdr[] = ["Jissad", "Juan", "César", "Dani", "Majo", "Self AE"];
 
 export type ContactedFrom = "Nico" | "Majo" | "Liz" | "Lau" | "Toqui";
 export const CONTACTED_FROM_OPTIONS: ContactedFrom[] = ["Nico", "Majo", "Liz", "Lau", "Toqui"];
@@ -76,6 +79,13 @@ export const SIZE_RANGES: Record<CompanySize, string> = {
   SMB: "11–99",
   MID: "100–999",
   ENTERPRISE: "1000+",
+};
+
+export type CompanySource = "inbound" | "outbound";
+export const SOURCE_OPTIONS: CompanySource[] = ["inbound", "outbound"];
+export const SOURCE_LABELS: Record<CompanySource, string> = {
+  inbound: "Inbound",
+  outbound: "Outbound",
 };
 
 export interface Contact {
@@ -102,12 +112,12 @@ export interface Company {
   status: CompanyStatus;
   unqualified_reason?: string;
   sdr?: Sdr | null;
-  additional_sdrs?: Sdr[];
   notes: string;
   amigos?: boolean;
   reviewed: boolean;
   created_at: string;
   experiencia_target?: string | null;
+  source?: CompanySource | null;
 }
 
 export interface Activity {

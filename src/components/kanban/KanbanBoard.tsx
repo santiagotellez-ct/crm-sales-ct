@@ -25,6 +25,7 @@ const KANBAN_COLUMNS: CompanyStatus[] = [
   "agendado",
   "reagendar",
   "unqualified",
+  "no_interesado",
   "no_answer",
 ];
 

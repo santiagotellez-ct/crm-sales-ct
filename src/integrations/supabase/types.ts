@@ -63,7 +63,6 @@ export type Database = {
       }
       companies: {
         Row: {
-          additional_sdrs: string[]
           amigos: boolean
           angle: string
           company_name: string
@@ -80,12 +79,12 @@ export type Database = {
           reviewed: boolean
           sdr: string | null
           size: string
+          source: string | null
           status: string
           unqualified_reason: string | null
           updated_at: string
         }
         Insert: {
-          additional_sdrs?: string[]
           amigos?: boolean
           angle?: string
           company_name: string
@@ -102,12 +101,12 @@ export type Database = {
           reviewed?: boolean
           sdr?: string | null
           size?: string
+          source?: string | null
           status?: string
           unqualified_reason?: string | null
           updated_at?: string
         }
         Update: {
-          additional_sdrs?: string[]
           amigos?: boolean
           angle?: string
           company_name?: string
@@ -124,6 +123,7 @@ export type Database = {
           reviewed?: boolean
           sdr?: string | null
           size?: string
+          source?: string | null
           status?: string
           unqualified_reason?: string | null
           updated_at?: string

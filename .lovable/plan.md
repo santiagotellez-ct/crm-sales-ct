@@ -1,20 +1,30 @@
-## Cambio
+## Objetivo
 
-En `src/components/dashboard/AeDashboardSection.tsx`, agregar debajo de cada tarjeta de AE una lista pequeña con los deals cerrados (Won + Commit) del quarter filtrado.
+Eliminar el campo `additional_sdrs` de la base de datos y del código. Actualmente hay 264 empresas que tienen valores ahí, pero ya no se usa en la UI ni se debe seguir manteniendo.
 
-## Detalles
+## Cambios
 
-- Mantener la lógica de conteo actual (cierres = deals en stage `is_won` o `Commited`, filtrados por fecha de creación dentro del Q seleccionado). No se cambia nada del cálculo de "Won+Commit" ni de la meta.
-- En el `useMemo` `perAe`, además de los contadores actuales, exponer `wonDeals` (la lista `won` ya calculada, ordenada por valor descendente).
-- Renderizar al final de cada tarjeta de AE — solo si hay deals cerrados y si hay un Q seleccionado distinto de "ALL" — un bloque con:
-  - Borde superior sutil (`border-t border-border/60`)
-  - Texto pequeño (`text-[11px]`)
-  - Una fila por deal con `company_name` truncado a la izquierda y `value` formateado en USD a la derecha
-  - Altura máxima con scroll (`max-h-28 overflow-auto`) para no romper el grid
-  - `title` con el nombre del deal para mostrar contexto en hover
+### 1. Base de datos (migración)
 
-## Fuera de alcance
+- `ALTER TABLE public.companies DROP COLUMN additional_sdrs;`
+- Los 264 registros con valores actuales se pierden con la columna (es lo deseado según tu indicación).
 
-- No tocar `WeeklyClosuresCard`.
-- No cambiar la lógica de qué cuenta como cierre ni la fecha que se usa para filtrar por Q.
-- No modificar el resumen del Equipo.
+### 2. Código frontend
+
+Quitar todas las referencias al campo:
+
+- **`src/types/company.ts`** — eliminar `additional_sdrs?: Sdr[]` de la interfaz `Company`.
+- **`src/hooks/useCompanyData.ts`** — eliminar las 3 referencias (tipo de la fila, mapeo al cargar, mapeo al guardar).
+
+### 3. Tipos auto-generados
+
+- **`src/integrations/supabase/types.ts`** se regenera solo cuando aplique la migración. No se edita a mano.
+
+## Lo que NO se hace
+
+- No se toca ninguna lógica de filtros, Kanban, DetailPanel ni dashboards — el campo no se usa en ningún componente visible.
+- No se cambia el `sdr` principal de ninguna empresa.
+
+## Verificación
+
+Después de aplicar: build limpio + confirmar con un `rg additional_sdr` que no quedan referencias.

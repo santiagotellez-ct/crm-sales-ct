@@ -13,6 +13,8 @@ const SDR_COLORS: Record<Sdr, string> = {
   Juan: "bg-score-high/15 text-score-high border-score-high/30",
   "César": "bg-fuchsia-500/15 text-fuchsia-600 border-fuchsia-500/30",
   "Self AE": "bg-muted text-foreground border-border",
+  Dani: "bg-sky-500/15 text-sky-600 border-sky-500/30",
+  Majo: "bg-emerald-500/15 text-emerald-600 border-emerald-500/30",
 };
 
 export function SdrSelect({ sdr, onChange, size = "sm" }: Props) {

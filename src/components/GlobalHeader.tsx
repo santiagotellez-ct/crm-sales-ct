@@ -35,7 +35,6 @@ export function GlobalHeader() {
 
         <div className="flex items-center gap-4">
           <MainNav />
-
           {profile && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -69,7 +68,10 @@ export function GlobalHeader() {
                   </>
                 )}
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleSignOut} className="text-destructive focus:text-destructive">
+                <DropdownMenuItem
+                  onClick={handleSignOut}
+                  className="text-destructive focus:text-destructive"
+                >
                   <LogOut className="h-4 w-4 mr-2" />
                   Cerrar sesión
                 </DropdownMenuItem>

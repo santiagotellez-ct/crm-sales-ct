@@ -27,16 +27,13 @@ export default function Login() {
     e.preventDefault();
     setSubmitting(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
-      toast.error(error.message);
-    }
+    if (error) toast.error(error.message);
     setSubmitting(false);
   }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
       <div className="w-full max-w-sm">
-        {/* Logo */}
         <div className="flex flex-col items-center mb-8 gap-3">
           <div className="h-12 w-12 rounded-xl bg-primary flex items-center justify-center text-primary-foreground font-display font-extrabold text-xl">
             CT
@@ -49,7 +46,6 @@ export default function Login() {
           </div>
         </div>
 
-        {/* Card */}
         <div className="border border-border rounded-xl bg-card p-6 shadow-sm">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1.5">
@@ -64,7 +60,6 @@ export default function Login() {
                 autoComplete="email"
               />
             </div>
-
             <div className="space-y-1.5">
               <Label htmlFor="password">Contraseña</Label>
               <Input
@@ -77,7 +72,6 @@ export default function Login() {
                 autoComplete="current-password"
               />
             </div>
-
             <Button type="submit" className="w-full" disabled={submitting}>
               {submitting ? "Ingresando..." : "Ingresar"}
             </Button>

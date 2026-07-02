@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Company, IcpFit, FIT_OPTIONS, FIT_LABELS, Sdr, SDR_OPTIONS, Angle, CompanySize, SIZE_OPTIONS, SIZE_LABELS } from "@/types/company";
+import { Company, IcpFit, FIT_OPTIONS, FIT_LABELS, Sdr, SDR_OPTIONS, Angle, CompanySize, SIZE_OPTIONS, SIZE_LABELS, CompanySource, SOURCE_OPTIONS, SOURCE_LABELS } from "@/types/company";
 import { Upload, Plus, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -88,6 +88,10 @@ function rowToCompany(row: Record<string, unknown>): Company | null {
       const s = v != null ? String(v).trim() : "";
       return s || null;
     })(),
+    source: (() => {
+      const v = String(get("source") ?? "").trim().toLowerCase();
+      return v === "inbound" || v === "outbound" ? (v as CompanySource) : "outbound";
+    })(),
   };
 }
 
@@ -108,11 +112,12 @@ export function AddCompanyDialog({ open, onOpenChange, onAdd, existingCompanies 
     sdr: "" as Sdr | "",
     reasoning: "",
     experiencia_target: "",
+    source: "outbound" as CompanySource,
   });
 
   const reset = () => setForm({
     company_name: "", domain: "", industry: "", country: "Colombia",
-    size: "MID", linkedin_url: "", icp_fit: "MID", sdr: "", reasoning: "", experiencia_target: "",
+    size: "MID", linkedin_url: "", icp_fit: "MID", sdr: "", reasoning: "", experiencia_target: "", source: "outbound",
   });
 
   const handleManualAdd = () => {
@@ -139,6 +144,7 @@ export function AddCompanyDialog({ open, onOpenChange, onAdd, existingCompanies 
       reviewed: false,
       created_at: todayStr(),
       experiencia_target: form.experiencia_target.trim() || null,
+      source: form.source,
     };
     const dup = findDuplicate(company, existingCompanies);
     if (dup) {
@@ -358,6 +364,15 @@ export function AddCompanyDialog({ open, onOpenChange, onAdd, existingCompanies 
                   onChange={(e) => setForm({ ...form, experiencia_target: e.target.value })}
                   placeholder="Ej: Visionaries Gala"
                 />
+              </div>
+              <div className="col-span-2">
+                <Label className="text-xs">Source</Label>
+                <Select value={form.source} onValueChange={(v) => setForm({ ...form, source: v as CompanySource })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {SOURCE_OPTIONS.map((s) => <SelectItem key={s} value={s}>{SOURCE_LABELS[s]}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <DialogFooter>

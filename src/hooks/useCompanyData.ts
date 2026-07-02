@@ -28,7 +28,7 @@ type CompanyRow = {
   unqualified_reason: string | null; sdr: string | null; notes: string;
   amigos: boolean; reviewed: boolean; created_at: string;
   experiencia_target: string | null;
-  additional_sdrs: string[] | null;
+  source: string | null;
 };
 type ContactRow = { id: string; company_id: string; name: string; role: string; email: string | null; phone: string | null; linkedin: string; contacted_from: string[] | string | null };
 
@@ -98,12 +98,12 @@ function mapCompany(row: CompanyRow, contacts: Contact[]): Company {
     status: row.status as CompanyStatus,
     unqualified_reason: row.unqualified_reason ?? undefined,
     sdr: (row.sdr as Sdr) ?? null,
-    additional_sdrs: (row.additional_sdrs ?? []) as Sdr[],
     notes: row.notes ?? "",
     amigos: row.amigos,
     reviewed: row.reviewed,
     created_at: row.created_at.split("T")[0],
     experiencia_target: row.experiencia_target ?? null,
+    source: (row.source as Company["source"]) ?? null,
   };
 }
 
@@ -151,11 +151,11 @@ function companyToInsert(c: Company) {
     status: c.status,
     unqualified_reason: c.unqualified_reason ?? null,
     sdr: c.sdr ?? null,
-    additional_sdrs: c.additional_sdrs ?? [],
     notes: c.notes,
     amigos: c.amigos ?? false,
     reviewed: c.reviewed,
     experiencia_target: c.experiencia_target ?? null,
+    source: c.source ?? null,
   };
   return isUuid ? { id: c.id, ...base } : base;
 }

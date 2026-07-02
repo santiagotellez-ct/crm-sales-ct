@@ -21,7 +21,9 @@ export default function Index() {
     addCompanies,
     scheduleMeeting,
     duplicateClusters,
+    deleteCompanies,
   } = useCompanyData();
+
   const navigate = useNavigate();
 
 
@@ -77,7 +79,14 @@ export default function Index() {
             onFitChange={setFit}
             onAddContact={addContact}
             onRemoveContact={removeContact}
+            onDelete={() => {
+              if (currentDetail) {
+                deleteCompanies([currentDetail.id]);
+                setDetailCompany(null);
+              }
+            }}
           />
+
         </>
       )}
 

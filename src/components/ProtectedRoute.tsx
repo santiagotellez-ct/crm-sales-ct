@@ -12,10 +12,7 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!session) {
-    return <Navigate to="/login" replace />;
-  }
-
+  if (!session) return <Navigate to="/login" replace />;
   return <>{children}</>;
 }
 
@@ -32,6 +29,5 @@ export function AdminRoute({ children }: { children: React.ReactNode }) {
 
   if (!session) return <Navigate to="/login" replace />;
   if (profile?.role !== "admin") return <Navigate to="/" replace />;
-
   return <>{children}</>;
 }

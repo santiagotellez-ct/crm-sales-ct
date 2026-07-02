@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { Company, FIT_LABELS, ContactedFrom } from "@/types/company";
+import { Company, FIT_LABELS, ContactedFrom, SOURCE_LABELS } from "@/types/company";
 import { RotateCw } from "lucide-react";
 
 const FIT_COLOR: Record<string, string> = {
@@ -7,6 +7,11 @@ const FIT_COLOR: Record<string, string> = {
   HIGH: "bg-primary/15 text-primary border-primary/30",
   MID: "bg-score-medium/15 text-score-medium border-score-medium/30",
   MAYBE: "bg-muted text-muted-foreground border-border",
+};
+
+const SOURCE_COLOR: Record<string, string> = {
+  inbound: "bg-score-high/15 text-score-high border-score-high/30",
+  outbound: "bg-primary/10 text-primary border-primary/30",
 };
 
 interface Props {
@@ -49,6 +54,11 @@ function Card({ company, linkedinAccounts, onClick, onReassign, daysInStage }: P
               in/{a}
             </span>
           ))}
+          {company.source && (
+            <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded border ${SOURCE_COLOR[company.source]}`}>
+              {SOURCE_LABELS[company.source]}
+            </span>
+          )}
         </div>
         {onReassign && (
           <button

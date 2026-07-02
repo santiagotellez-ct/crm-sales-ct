@@ -1,10 +1,10 @@
-import { Company, Contact, IcpFit, FIT_LABELS, CompanySize, SIZE_OPTIONS, SIZE_LABELS, SIZE_RANGES } from "@/types/company";
+import { Company, Contact, IcpFit, FIT_LABELS, CompanySize, SIZE_OPTIONS, SIZE_LABELS, SIZE_RANGES, CompanySource, SOURCE_OPTIONS, SOURCE_LABELS } from "@/types/company";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SizeBadge } from "./SizeBadge";
-import { X, ExternalLink, Loader2, Sparkles } from "lucide-react";
+import { X, ExternalLink, Loader2, Sparkles, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { StatusSelect } from "./StatusSelect";
 import { ContactsPanel } from "./ContactsPanel";
@@ -25,13 +25,16 @@ interface DetailPanelProps {
   onFitChange: (id: string, fit: IcpFit) => void;
   onAddContact: (companyId: string, contact: Contact) => void | Promise<void>;
   onRemoveContact: (companyId: string, linkedin: string) => void;
+  onDelete?: () => void;
 }
+
 
 
 export function DetailPanel({
   company, onClose, onUpdateNotes,
-  onStatusChange, onFitChange, onAddContact, onRemoveContact,
+  onStatusChange, onFitChange, onAddContact, onRemoveContact, onDelete,
 }: DetailPanelProps) {
+
 
   const [notes, setNotes] = useState(company.notes);
   const { tasks, addTask, toggleTask, deleteTask, updateCompany, scheduleMeeting, updateContact, sequences, reassignCompany, setSdr, activities } = useCompanyData();
@@ -97,10 +100,27 @@ export function DetailPanel({
     <div className="fixed inset-y-0 right-0 w-full max-w-md bg-card border-l border-border shadow-2xl z-50 flex flex-col overflow-hidden animate-in slide-in-from-right duration-200">
       <div className="flex items-center justify-between px-6 py-4 border-b border-border">
         <h2 className="text-lg font-bold text-foreground">{company.company_name}</h2>
-        <button onClick={onClose} className="p-1 rounded hover:bg-muted transition-colors">
-          <X className="h-5 w-5 text-muted-foreground" />
-        </button>
+        <div className="flex items-center gap-1">
+          {onDelete && (
+            <button
+              onClick={() => {
+                if (window.confirm("¿Eliminar esta empresa? Se borrarán también sus contactos, tareas e historial.")) {
+                  onDelete();
+                }
+              }}
+              className="p-1.5 rounded hover:bg-destructive/10 hover:text-destructive transition-colors"
+              title="Eliminar empresa"
+              aria-label="Eliminar empresa"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          )}
+          <button onClick={onClose} className="p-1 rounded hover:bg-muted transition-colors">
+            <X className="h-5 w-5 text-muted-foreground" />
+          </button>
+        </div>
       </div>
+
 
       <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
         <div>
@@ -209,6 +229,20 @@ export function DetailPanel({
             placeholder="Ej: Visionaries Gala"
             className="h-8 text-sm"
           />
+        </div>
+
+        <div>
+          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-2">Source</span>
+          <Select
+            value={company.source ?? "NONE"}
+            onValueChange={(v) => updateCompany(company.id, { source: v === "NONE" ? null : (v as CompanySource) })}
+          >
+            <SelectTrigger className="h-8 text-xs w-fit gap-2"><SelectValue placeholder="Sin definir" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="NONE">Sin definir</SelectItem>
+              {SOURCE_OPTIONS.map((s) => <SelectItem key={s} value={s}>{SOURCE_LABELS[s]}</SelectItem>)}
+            </SelectContent>
+          </Select>
         </div>
 
         <div>
