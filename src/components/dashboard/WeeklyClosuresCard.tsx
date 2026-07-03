@@ -41,7 +41,7 @@ export function WeeklyClosuresCard({ year, week }: WeeklyClosuresCardProps = {})
     const total = perAe.reduce((a, x) => a + x.value, 0);
     const totalCount = perAe.reduce((a, x) => a + x.count, 0);
     return { perAe, total, totalCount };
-  }, [deals, stages, year, week]);
+  }, [deals, year, week]);
 
   return (
     <div className="bg-card border-2 border-score-high/40 rounded-lg p-5">
