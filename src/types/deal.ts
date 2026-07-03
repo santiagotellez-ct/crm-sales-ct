@@ -53,6 +53,7 @@ export interface Deal {
   commit_workshop: boolean;
   commit_stand: boolean;
   commit_experience_id: string | null;
+  won_at: string | null;
   contact_ids: string[];
   created_at: number;
   tasks: DealTask[];

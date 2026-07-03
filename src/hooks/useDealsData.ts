@@ -62,6 +62,7 @@ function mapDeal(r: any, contactIds: string[], tasks: DealTask[]): Deal {
     commit_workshop: !!r.commit_workshop,
     commit_stand: !!r.commit_stand,
     commit_experience_id: r.commit_experience_id ?? null,
+    won_at: r.won_at ?? null,
     checklist: (r.checklist as Deal["checklist"]) ?? {},
     contact_ids: contactIds,
     created_at: new Date(r.created_at).getTime(),

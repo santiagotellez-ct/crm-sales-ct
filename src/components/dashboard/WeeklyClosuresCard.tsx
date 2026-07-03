@@ -16,28 +16,20 @@ interface WeeklyClosuresCardProps {
 }
 
 export function WeeklyClosuresCard({ year, week }: WeeklyClosuresCardProps = {}) {
-  const { deals, stages } = useDealsData();
+  const { deals } = useDealsData();
 
   const data = useMemo(() => {
     const ref = year && week ? isoWeekStart(year, week) : new Date();
     const s = startOfWeek(ref, { weekStartsOn: 1 });
     const e = endOfWeek(ref, { weekStartsOn: 1 });
-    const stageMap = new Map(stages.map((s) => [s.id, s]));
-    const isClosedWon = (stageId: string) => {
-      const s = stageMap.get(stageId);
-      if (!s) return false;
-      return s.is_won || s.name === "Commited";
-    };
     const inWeek = (d: Deal) => {
-      if (!d.expected_close_date) return false;
-      // expected_close_date is a date string (YYYY-MM-DD). Parse as local.
-      const [y, m, day] = d.expected_close_date.split("-").map(Number);
-      const t = new Date(y, (m ?? 1) - 1, day ?? 1).getTime();
+      if (!d.won_at) return false;
+      const t = new Date(d.won_at).getTime();
       return t >= s.getTime() && t <= e.getTime();
     };
     const perAe = AE_OPTIONS.map((ae) => {
       const closed = deals
-        .filter((d) => d.account_executive === ae && isClosedWon(d.stage_id) && inWeek(d))
+        .filter((d) => d.account_executive === ae && inWeek(d))
         .sort((a, b) => b.value - a.value);
       return {
         ae,
