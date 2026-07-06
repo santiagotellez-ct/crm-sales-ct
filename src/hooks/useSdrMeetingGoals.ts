@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useTeamMembers } from "./useTeamMembers";
 
 export interface SdrMeetingGoal {
   id: string;
@@ -9,6 +10,7 @@ export interface SdrMeetingGoal {
   goal: number;
 }
 
+// Kept as emergency fallback only — superseded by team_members.meeting_goal
 export const DEFAULT_SDR_MEETING_GOALS: Record<string, number> = {
   "César": 24,
   Jissad: 12,
@@ -18,6 +20,7 @@ export const DEFAULT_SDR_MEETING_GOALS: Record<string, number> = {
 
 export function useSdrMeetingGoals(year: number, week: number) {
   const [goals, setGoals] = useState<SdrMeetingGoal[]>([]);
+  const { data: members = [] } = useTeamMembers();
 
   const load = useCallback(async () => {
     const { data } = await supabase
@@ -35,8 +38,12 @@ export function useSdrMeetingGoals(year: number, week: number) {
   const goalFor = useCallback((sdr: string): number => {
     const row = goals.find((g) => g.sdr === sdr);
     if (row) return row.goal;
+    // DB default from team_members
+    const member = members.find((m) => m.name === sdr && m.role === "sdr");
+    if (member && member.meeting_goal > 0) return member.meeting_goal;
+    // Hardcoded fallback
     return DEFAULT_SDR_MEETING_GOALS[sdr] ?? 0;
-  }, [goals]);
+  }, [goals, members]);
 
   const setGoal = useCallback(async (sdr: string, goal: number) => {
     const existing = goals.find((g) => g.sdr === sdr);

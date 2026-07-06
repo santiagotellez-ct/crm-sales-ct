@@ -819,6 +819,27 @@ export type Database = {
           },
         ]
       }
+      ae_targets: {
+        Row: {
+          ae_name: string
+          quarter_key: string
+          target: number
+          updated_at: string
+        }
+        Insert: {
+          ae_name: string
+          quarter_key: string
+          target?: number
+          updated_at?: string
+        }
+        Update: {
+          ae_name?: string
+          quarter_key?: string
+          target?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       team_members: {
         Row: {
           id: string
@@ -827,6 +848,8 @@ export type Database = {
           email: string | null
           is_active: boolean
           display_order: number
+          pipe_goal: number
+          meeting_goal: number
           created_at: string
         }
         Insert: {
@@ -836,6 +859,8 @@ export type Database = {
           email?: string | null
           is_active?: boolean
           display_order?: number
+          pipe_goal?: number
+          meeting_goal?: number
           created_at?: string
         }
         Update: {
@@ -845,6 +870,8 @@ export type Database = {
           email?: string | null
           is_active?: boolean
           display_order?: number
+          pipe_goal?: number
+          meeting_goal?: number
           created_at?: string
         }
         Relationships: []

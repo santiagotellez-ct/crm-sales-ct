@@ -10,6 +10,8 @@ export interface TeamMember {
   email: string | null;
   is_active: boolean;
   display_order: number;
+  pipe_goal: number;
+  meeting_goal: number;
   created_at: string;
 }
 
@@ -78,5 +80,62 @@ export function useDeleteTeamMember() {
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: QUERY_KEY }),
+  });
+}
+
+export function useUpdateTeamMemberGoal() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      pipe_goal,
+      meeting_goal,
+    }: {
+      id: string;
+      pipe_goal?: number;
+      meeting_goal?: number;
+    }) => {
+      const patch: Record<string, number> = {};
+      if (pipe_goal !== undefined) patch.pipe_goal = pipe_goal;
+      if (meeting_goal !== undefined) patch.meeting_goal = meeting_goal;
+      const { error } = await supabase.from("team_members").update(patch).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: QUERY_KEY }),
+  });
+}
+
+// ─── AE Quarterly Targets ───────────────────────────────────────────────────
+
+const AE_TARGETS_KEY = ["ae_targets"] as const;
+
+export interface AeTarget {
+  ae_name: string;
+  quarter_key: string;
+  target: number;
+}
+
+export function useAeTargets() {
+  return useQuery({
+    queryKey: AE_TARGETS_KEY,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("ae_targets").select("*");
+      if (error) throw error;
+      return data as AeTarget[];
+    },
+    staleTime: 1000 * 60 * 5,
+  });
+}
+
+export function useSetAeTarget() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ ae_name, quarter_key, target }: AeTarget) => {
+      const { error } = await supabase
+        .from("ae_targets")
+        .upsert({ ae_name, quarter_key, target, updated_at: new Date().toISOString() });
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: AE_TARGETS_KEY }),
   });
 }

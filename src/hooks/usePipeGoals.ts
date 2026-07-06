@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useTeamMembers } from "./useTeamMembers";
 
 export type PipeOwnerType = "ae" | "sdr";
 
@@ -12,6 +13,7 @@ export interface PipeGoal {
   goal: number;
 }
 
+// Kept as emergency fallback only — superseded by team_members.pipe_goal
 export const DEFAULT_AE_PIPE_GOALS: Record<string, number> = {
   Majo: 140000,
   Santi: 140000,
@@ -30,6 +32,7 @@ export const PIPE_TEAM_WEEKLY_GOAL = 480000;
 
 export function usePipeGoals(year: number, week: number) {
   const [goals, setGoals] = useState<PipeGoal[]>([]);
+  const { data: members = [] } = useTeamMembers();
 
   const load = useCallback(async () => {
     const { data } = await supabase
@@ -55,10 +58,14 @@ export function usePipeGoals(year: number, week: number) {
         (g) => g.owner_type === owner_type && g.owner_name === owner_name
       );
       if (row) return row.goal;
+      // DB default from team_members
+      const member = members.find((m) => m.name === owner_name && m.role === owner_type);
+      if (member && member.pipe_goal > 0) return member.pipe_goal;
+      // Hardcoded fallback
       const defs = owner_type === "ae" ? DEFAULT_AE_PIPE_GOALS : DEFAULT_SDR_PIPE_GOALS;
       return defs[owner_name] ?? 0;
     },
-    [goals]
+    [goals, members]
   );
 
   const setGoal = useCallback(

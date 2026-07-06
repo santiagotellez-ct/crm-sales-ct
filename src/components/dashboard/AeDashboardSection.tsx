@@ -13,8 +13,9 @@ import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   QUARTERS, QuarterKey, getCurrentQuarter, getQuarter,
-  getAeTarget, weeksRemainingInQuarter, dealInQuarter,
+  weeksRemainingInQuarter, dealInQuarter,
 } from "@/lib/quarters";
+import { useAeTargets } from "@/hooks/useTeamMembers";
 
 function money(n: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
@@ -24,6 +25,7 @@ export function AeDashboardSection() {
   const { deals, stages } = useDealsData();
   const { events } = useEventsData();
   const { aeNames, secondaryAeNames, isLoading: teamLoading } = useTeamMemberNames();
+  const { data: aeTargetsData = [] } = useAeTargets();
   const aeList = teamLoading || aeNames.length === 0 ? AE_OPTIONS : aeNames;
   const secondaryAeList = teamLoading || secondaryAeNames.length === 0 ? SECONDARY_AE_OPTIONS : secondaryAeNames;
   const [qFilter, setQFilter] = useState<QuarterKey>(getCurrentQuarter().key);
@@ -68,7 +70,8 @@ export function AeDashboardSection() {
       const wonAll = allAeDeals.filter((d) => isClosedWon(d.stage_id));
       const lostAll = allAeDeals.filter((d) => stageMap.get(d.stage_id)?.is_lost);
       const conversion = (wonAll.length + lostAll.length) > 0 ? Math.round((wonAll.length / (wonAll.length + lostAll.length)) * 100) : 0;
-      const target = getAeTarget(qFilter, ae);
+      const target = qFilter === "ALL" ? 0 :
+        (aeTargetsData.find((t) => t.ae_name === ae && t.quarter_key === qFilter)?.target ?? 0);
       const remaining = Math.max(0, target - wonValue);
       const weeklyNeeded = weeksLeft > 0 ? remaining / weeksLeft : remaining;
       const targetProgress = target > 0 ? Math.min(100, Math.round((wonValue / target) * 100)) : 0;
@@ -83,7 +86,7 @@ export function AeDashboardSection() {
         pipelineNeeded, pipelineGap, convRatio, wonDeals,
       };
     });
-  }, [deals, stages, quarter, qFilter, weeksLeft, subAeFilter, eventFilter, aeList]);
+  }, [deals, stages, quarter, qFilter, weeksLeft, subAeFilter, eventFilter, aeList, aeTargetsData]);
 
   return (
     <section className="space-y-4">
