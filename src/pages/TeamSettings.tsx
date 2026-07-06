@@ -86,16 +86,17 @@ function AddMemberForm({ role, onAdd }: { role: TeamMemberRole; onAdd: (name: st
 // ─── Inline goal cell ────────────────────────────────────────────────────────
 
 function GoalCell({
-  value,
+  value: rawValue,
   onSave,
   prefix = "",
   placeholder = "0",
 }: {
-  value: number;
+  value: number | undefined;
   onSave: (v: number) => Promise<void>;
   prefix?: string;
   placeholder?: string;
 }) {
+  const value = rawValue ?? 0;
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(String(value));
   const [saving, setSaving] = useState(false);
