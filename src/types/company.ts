@@ -60,9 +60,7 @@ export const STATUS_OPTIONS: CompanyStatus[] = [
   "unqualified_post_meeting",
 ];
 
-// "Mapi" remains in the union for historical data, but is no longer offered
-// as an assignable SDR.
-export type Sdr = "Jissad" | "Mapi" | "Juan" | "César" | "Self AE" | "Dani" | "Majo";
+export type Sdr = string;
 export const SDR_OPTIONS: Sdr[] = ["Jissad", "Juan", "César", "Dani", "Majo", "Self AE"];
 
 export type ContactedFrom = "Nico" | "Majo" | "Liz" | "Lau" | "Toqui";

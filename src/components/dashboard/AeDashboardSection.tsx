@@ -3,6 +3,8 @@ import { isPast } from "date-fns";
 import { useDealsData } from "@/hooks/useDealsData";
 import { useEventsData } from "@/hooks/useEventsData";
 import { AE_OPTIONS, SECONDARY_AE_OPTIONS, SecondaryAe } from "@/types/meeting";
+import { useTeamMemberNames } from "@/hooks/useTeamMembers";
+import { AvgDaysToCloseCard } from "./AvgDaysToCloseCard";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -21,6 +23,9 @@ function money(n: number) {
 export function AeDashboardSection() {
   const { deals, stages } = useDealsData();
   const { events } = useEventsData();
+  const { aeNames, secondaryAeNames, isLoading: teamLoading } = useTeamMemberNames();
+  const aeList = teamLoading || aeNames.length === 0 ? AE_OPTIONS : aeNames;
+  const secondaryAeList = teamLoading || secondaryAeNames.length === 0 ? SECONDARY_AE_OPTIONS : secondaryAeNames;
   const [qFilter, setQFilter] = useState<QuarterKey>(getCurrentQuarter().key);
   const [subAeFilter, setSubAeFilter] = useState<SecondaryAe | "ALL">("ALL");
   const [eventFilter, setEventFilter] = useState<string[]>(["ALL"]);
@@ -37,7 +42,7 @@ export function AeDashboardSection() {
       if (!s) return false;
       return s.is_won || s.name === "Commited";
     };
-    return AE_OPTIONS.map((ae) => {
+    return aeList.map((ae) => {
       let allAeDeals = deals.filter((d) => d.account_executive === ae);
       if (ae === "Otro AE" && subAeFilter !== "ALL") {
         allAeDeals = allAeDeals.filter((d) => d.secondary_ae === subAeFilter);
@@ -78,7 +83,7 @@ export function AeDashboardSection() {
         pipelineNeeded, pipelineGap, convRatio, wonDeals,
       };
     });
-  }, [deals, stages, quarter, qFilter, weeksLeft, subAeFilter, eventFilter]);
+  }, [deals, stages, quarter, qFilter, weeksLeft, subAeFilter, eventFilter, aeList]);
 
   return (
     <section className="space-y-4">
@@ -99,7 +104,7 @@ export function AeDashboardSection() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="ALL">Todos los sub-AE</SelectItem>
-            {SECONDARY_AE_OPTIONS.map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+            {secondaryAeList.map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}
           </SelectContent>
         </Select>
         <Popover open={eventFilterOpen} onOpenChange={setEventFilterOpen}>
@@ -307,6 +312,8 @@ export function AeDashboardSection() {
           </div>
         ))}
       </div>
+
+      <AvgDaysToCloseCard deals={deals} stages={stages} />
     </section>
   );
 }

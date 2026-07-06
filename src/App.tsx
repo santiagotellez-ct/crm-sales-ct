@@ -12,6 +12,7 @@ import Deals from "./pages/Deals.tsx";
 import AeTasks from "./pages/AeTasks.tsx";
 import Login from "./pages/Login.tsx";
 import AdminUsers from "./pages/AdminUsers.tsx";
+import TeamSettings from "./pages/TeamSettings.tsx";
 import { CompanyDataProvider } from "@/hooks/useCompanyData";
 import { GlobalHeader } from "@/components/GlobalHeader";
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -41,6 +42,7 @@ const App = () => (
                       <Route path="/meetings" element={<Meetings />} />
                       <Route path="/deals" element={<Deals />} />
                       <Route path="/ae-tasks" element={<AeTasks />} />
+                      <Route path="/settings/team" element={<TeamSettings />} />
                       <Route
                         path="/admin/users"
                         element={

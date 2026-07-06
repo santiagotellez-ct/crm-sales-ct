@@ -1,9 +1,7 @@
-export type AccountExecutive = "Nico" | "Majo" | "Santi" | "Toqui" | "Otro AE";
+export type AccountExecutive = string;
 export const AE_OPTIONS: AccountExecutive[] = ["Nico", "Majo", "Santi", "Toqui", "Otro AE"];
 
-// Sub-AEs grouped under "Otro AE". A deal stores account_executive="Otro AE"
-// and secondary_ae="Nath" (etc.) to identify the actual person.
-export type SecondaryAe = "Nath" | "Liz" | "Lau" | "Fernando" | "Carlos Alberto";
+export type SecondaryAe = string;
 export const SECONDARY_AE_OPTIONS: SecondaryAe[] = ["Nath", "Liz", "Lau", "Fernando", "Carlos Alberto"];
 
 export interface Meeting {

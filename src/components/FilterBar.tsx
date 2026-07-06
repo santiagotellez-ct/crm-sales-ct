@@ -1,4 +1,5 @@
 import { IcpFit, TimePeriod, CompanyStatus, Sdr, STATUS_LABELS, STATUS_OPTIONS, FIT_OPTIONS, FIT_LABELS, SDR_OPTIONS } from "@/types/company";
+import { useTeamMemberNames } from "@/hooks/useTeamMembers";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Search, SlidersHorizontal } from "lucide-react";
@@ -25,6 +26,8 @@ export function FilterBar({ filters, onFiltersChange, countries, industries, res
   const update = (partial: Partial<FilterBarProps["filters"]>) => {
     onFiltersChange({ ...filters, ...partial });
   };
+  const { sdrNames, isLoading: sdrLoading } = useTeamMemberNames();
+  const sdrOptions = sdrLoading || sdrNames.length === 0 ? SDR_OPTIONS : sdrNames;
 
   // Local state for the search input so typing feels instant; we debounce
   // propagation upstream to avoid re-filtering/re-rendering thousands of rows
@@ -133,7 +136,7 @@ export function FilterBar({ filters, onFiltersChange, countries, industries, res
             <SelectContent>
               <SelectItem value="ALL">Todos</SelectItem>
               <SelectItem value="UNASSIGNED">Sin asignar</SelectItem>
-              {SDR_OPTIONS.map((s) => (
+              {sdrOptions.map((s) => (
                 <SelectItem key={s} value={s}>{s}</SelectItem>
               ))}
             </SelectContent>

@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Sdr, SDR_OPTIONS, ContactedFrom, CONTACTED_FROM_OPTIONS } from "@/types/company";
+import { useTeamMemberNames } from "@/hooks/useTeamMembers";
 
 interface Props {
   open: boolean;
@@ -18,6 +19,8 @@ const NONE = "__none";
 export function ReassignDialog({ open, companyName, currentSdr, currentLinkedin, onOpenChange, onConfirm }: Props) {
   const [sdr, setSdr] = useState<string>(currentSdr ?? NONE);
   const [linkedin, setLinkedin] = useState<string>(currentLinkedin ?? NONE);
+  const { sdrNames, isLoading: sdrLoading } = useTeamMemberNames();
+  const sdrOptions = sdrLoading || sdrNames.length === 0 ? SDR_OPTIONS : sdrNames;
 
   // Reset when reopened
   const handleOpenChange = (o: boolean) => {
@@ -51,7 +54,7 @@ export function ReassignDialog({ open, companyName, currentSdr, currentLinkedin,
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value={NONE}>Sin asignar</SelectItem>
-                {SDR_OPTIONS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                {sdrOptions.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>

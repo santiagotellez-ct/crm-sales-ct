@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, Users, ChevronDown } from "lucide-react";
+import { LogOut, Users, ChevronDown, Settings } from "lucide-react";
 
 export function GlobalHeader() {
   const { profile, signOut } = useAuth();
@@ -49,6 +49,11 @@ export function GlobalHeader() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuItem onClick={() => navigate("/settings/team")}>
+                  <Settings className="h-4 w-4 mr-2" />
+                  Configurar equipo
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col gap-0.5">
                     <p className="text-sm font-medium leading-none">{profile.full_name || "—"}</p>
