@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Plus, Settings2, CalendarIcon, Download, CalendarRange, ChevronDown } from "lucide-react";
+import { ArrowLeft, Plus, Settings2, CalendarIcon, Download, CalendarRange, ChevronDown, Search } from "lucide-react";
 import { DndContext, DragEndEvent, PointerSensor, useDroppable, useSensor, useSensors } from "@dnd-kit/core";
 import { useDealsData } from "@/hooks/useDealsData";
 import { Deal } from "@/types/deal";
@@ -13,6 +13,7 @@ import { CommitedFieldsDialog, CommitedFields } from "@/components/deals/Commite
 import { ExportDealsDialog } from "@/components/deals/ExportDealsDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -124,6 +125,7 @@ export default function Deals() {
   const [pendingMove, setPendingMove] = useState<{ deal: Deal; toStageId: string } | null>(null);
   const [pendingCommited, setPendingCommited] = useState<{ deal: Deal; toStageId: string } | null>(null);
   const [pendingNextTask, setPendingNextTask] = useState<{ deal: Deal; completedTitle: string } | null>(null);
+  const [search, setSearch] = useState("");
   const [aeFilter, setAeFilter] = useState<Set<AccountExecutive>>(new Set());
   const [secondaryAeFilter, setSecondaryAeFilter] = useState<Set<SecondaryAe>>(new Set());
   const [qFilter, setQFilter] = useState<QuarterKey>("ALL");
@@ -139,6 +141,14 @@ export default function Deals() {
 
   const filteredDeals = useMemo(() => {
     let arr = deals;
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      arr = arr.filter(
+        (d) =>
+          d.company_name.toLowerCase().includes(q) ||
+          (d.name && d.name.toLowerCase().includes(q))
+      );
+    }
     if (aeFilter.size > 0 || secondaryAeFilter.size > 0) {
       arr = arr.filter((d) => {
         const primaryMatch = aeFilter.size === 0 || aeFilter.has(d.account_executive);
@@ -169,7 +179,7 @@ export default function Deals() {
       );
     }
     return arr;
-  }, [deals, aeFilter, secondaryAeFilter, qFilter, eventFilter, createdDir, createdDate, rangeFrom, rangeTo]);
+  }, [deals, search, aeFilter, secondaryAeFilter, qFilter, eventFilter, createdDir, createdDate, rangeFrom, rangeTo]);
 
   const eventOptions = useMemo(() => {
     const set = new Set<string>();
@@ -271,6 +281,15 @@ export default function Deals() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+              <Input
+                placeholder="Buscar empresa..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="h-8 pl-8 text-sm w-48"
+              />
+            </div>
             <MultiSelectFilter<AccountExecutive>
               label="Filtrar por AE"
               options={AE_OPTIONS}
