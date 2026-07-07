@@ -40,7 +40,7 @@ function MultiBox<T extends string>({ title, options, selected, onChange, format
         <p className="text-xs font-semibold uppercase text-muted-foreground">{title}</p>
         <button
           type="button"
-          className="text-[10px] text-black bg-yellow-300 px-1.5 py-0.5 rounded font-medium"
+          className="text-[10px] text-primary-foreground bg-primary px-1.5 py-0.5 rounded font-medium"
           onClick={() => onChange(allOn ? new Set() : new Set(options))}
         >
           {allOn ? "Ninguno" : "Todos"}
@@ -202,7 +202,7 @@ export function ExportDealsDialog({ open, onOpenChange, deals, stages }: Props) 
               <p className="text-xs font-semibold uppercase text-muted-foreground">Stages</p>
               <button
                 type="button"
-                className="text-[10px] text-black bg-yellow-300 px-1.5 py-0.5 rounded font-medium"
+                className="text-[10px] text-primary-foreground bg-primary px-1.5 py-0.5 rounded font-medium"
                 onClick={() => setStageSel(stageSel.size === stages.length ? new Set() : new Set(stages.map((s) => s.id)))}
               >
                 {stageSel.size === stages.length ? "Ninguno" : "Todos"}
@@ -231,7 +231,7 @@ export function ExportDealsDialog({ open, onOpenChange, deals, stages }: Props) 
                 <p className="text-xs font-semibold uppercase text-muted-foreground">Eventos</p>
                 <button
                   type="button"
-                  className="text-[10px] text-black bg-yellow-300 px-1.5 py-0.5 rounded font-medium"
+                  className="text-[10px] text-primary-foreground bg-primary px-1.5 py-0.5 rounded font-medium"
                   onClick={() => setEvents(events.size === eventOptionsWithNone.length ? new Set() : new Set(eventOptionsWithNone))}
                 >
                   {events.size === eventOptionsWithNone.length ? "Ninguno" : "Todos"}

@@ -409,7 +409,7 @@ export function DealDialog({ open, onOpenChange, onCreate, initialCompanyId }: P
                 <button
                   type="button"
                   onClick={() => setShowNewContact((v) => !v)}
-                  className="text-xs text-black bg-yellow-300 hover:bg-yellow-400 font-medium rounded px-2 py-0.5 inline-flex items-center gap-1"
+                  className="text-xs text-primary-foreground bg-primary hover:bg-primary/90 font-medium rounded px-2 py-0.5 inline-flex items-center gap-1"
                 >
                   <Plus className="h-3 w-3" /> Nuevo contacto
                 </button>

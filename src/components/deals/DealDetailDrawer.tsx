@@ -217,7 +217,7 @@ export function DealDetailDrawer({
                 <button
                   type="button"
                   onClick={() => setShowNewContact((v) => !v)}
-                  className="text-[11px] font-medium text-foreground bg-yellow-300 hover:bg-yellow-400 rounded px-2 py-1 inline-flex items-center gap-1"
+                  className="text-[11px] font-medium text-primary-foreground bg-primary hover:bg-primary/90 rounded px-2 py-1 inline-flex items-center gap-1"
                 >
                   <Plus className="h-3 w-3" /> Nuevo contacto
                 </button>

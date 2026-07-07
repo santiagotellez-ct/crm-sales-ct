@@ -49,7 +49,7 @@ const SDR_PIPE_COLORS: Record<string, string> = {
   Jissad: "hsl(340 75% 55%)",
   Mapi: "hsl(160 70% 42%)",
   Juan: "hsl(280 70% 60%)",
-  "Self AE": "hsl(45 90% 50%)",
+  "Self AE": "hsl(0 0% 20%)",
 };
 
 function fmtMoney(n: number) {
@@ -1088,7 +1088,7 @@ export default function Meetings() {
                         <div className="flex items-baseline gap-3 text-xs">
                           <span className="text-emerald-600 font-semibold tabular-nums">{q} <span className="font-normal text-muted-foreground">qualified</span></span>
                           <span className="text-red-600 font-semibold tabular-nums">{u} <span className="font-normal text-muted-foreground">unq.</span></span>
-                          <span className="text-amber-500 font-semibold tabular-nums">{pending} <span className="font-normal text-muted-foreground">pend.</span></span>
+                          <span className="text-foreground font-semibold tabular-nums">{pending} <span className="font-normal text-muted-foreground">pend.</span></span>
                         </div>
                         <div className="h-1.5 bg-muted rounded overflow-hidden flex">
                           {total > 0 ? (

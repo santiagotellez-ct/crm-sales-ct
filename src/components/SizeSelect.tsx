@@ -4,7 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 const STYLES: Record<CompanySize, string> = {
   SMB: "bg-sky-500/15 text-sky-700 dark:text-sky-300 border-sky-500/30",
   MID: "bg-violet-500/15 text-violet-700 dark:text-violet-300 border-violet-500/30",
-  ENTERPRISE: "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30",
+  ENTERPRISE: "bg-neutral-500/15 text-neutral-700 dark:text-neutral-300 border-neutral-500/30",
 };
 
 interface Props {
