@@ -35,13 +35,8 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-background">
       <div className="w-full max-w-sm">
         <div className="flex flex-col items-center mb-8 gap-3">
-          <img src="/logo-ct.svg" alt="Colombia Tech" className="h-12 w-auto" />
-          <div className="text-center">
-            <p className="font-display font-extrabold tracking-tight text-foreground text-lg uppercase">
-              Colombia Tech · Sales OS
-            </p>
-            <p className="text-sm text-muted-foreground mt-1">Ingresa a tu cuenta</p>
-          </div>
+          <img src="/logo-ct.svg" alt="Colombia Tech" className="h-8 w-auto" />
+          <p className="text-sm text-muted-foreground">Ingresa a tu cuenta</p>
         </div>
 
         <div className="border border-border rounded-xl bg-card p-6 shadow-sm">
