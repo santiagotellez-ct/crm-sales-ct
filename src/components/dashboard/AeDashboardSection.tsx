@@ -295,14 +295,33 @@ export function AeDashboardSection() {
                 </div>
               </>
             ) : (
-              <div className="space-y-1">
-                <div className="text-xs text-muted-foreground">Total cerrado</div>
-                <div className="text-2xl font-bold tabular-nums text-foreground">{money(a.wonValue)}</div>
-                <div className="text-xs text-muted-foreground">{a.won} deals Won + Commit</div>
+              <div className="space-y-2">
+                {a.target > 0 ? (
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">Cerrado / Meta</span>
+                      <span className="font-semibold">{money(a.wonValue)} / {money(a.target)}</span>
+                    </div>
+                    <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                      <div className="h-full bg-primary" style={{ width: `${a.targetProgress}%` }} />
+                    </div>
+                    <div className="text-right text-xs font-semibold text-primary">{a.targetProgress}% de meta</div>
+                  </div>
+                ) : (
+                  <div className="space-y-0.5">
+                    <div className="text-xs text-muted-foreground">Total cerrado</div>
+                    <div className="text-2xl font-bold tabular-nums text-foreground">{money(a.wonValue)}</div>
+                  </div>
+                )}
+                <div className="flex justify-between text-xs pt-1 border-t border-border">
+                  <span className="text-score-high">Won+Commit {a.won}</span>
+                  <span className="text-muted-foreground">Win {a.winRate}%</span>
+                  <span className="text-destructive">Lost {a.lost}</span>
+                </div>
               </div>
             )}
 
-            {qFilter !== "ALL" && a.wonDeals.length > 0 && (
+            {a.wonDeals.length > 0 && (
               <div className="pt-1 border-t border-border/60 text-[11px] text-muted-foreground space-y-0.5 max-h-28 overflow-auto">
                 {a.wonDeals.map((d) => (
                   <div key={d.id} className="flex justify-between gap-2" title={d.name || undefined}>
