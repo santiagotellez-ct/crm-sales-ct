@@ -1,12 +1,13 @@
 import { useMemo, useState } from "react";
-import { Company, CompanyStatus, STATUS_LABELS, Sdr, SDR_OPTIONS, IcpFit, FIT_OPTIONS, FIT_LABELS, ContactedFrom, CONTACTED_FROM_OPTIONS, Activity } from "@/types/company";
+import { Company, CompanyStatus, STATUS_LABELS, SDR_OPTIONS, IcpFit, FIT_OPTIONS, FIT_LABELS, ContactedFrom, CONTACTED_FROM_OPTIONS, Activity } from "@/types/company";
 import { useTeamMemberNames } from "@/hooks/useTeamMembers";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Search, CalendarIcon } from "lucide-react";
+import { Search, CalendarIcon, ChevronDown } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { KanbanCard } from "./KanbanCard";
@@ -46,9 +47,20 @@ function isSameDay(a: Date, b: Date) {
 export function KanbanBoard({ companies, onOpenDetail }: Props) {
   const { setStatus, scheduleMeeting, reassignCompany, activities } = useCompanyData();
   const [fit, setFit] = useState<IcpFit | "ALL">("ALL");
-  const [sdr, setSdr] = useState<Sdr | "ALL" | "UNASSIGNED">("ALL");
   const { sdrNames, isLoading: sdrLoading } = useTeamMemberNames();
   const sdrOptions = sdrLoading || sdrNames.length === 0 ? SDR_OPTIONS : sdrNames;
+  const sdrFilterKeys = useMemo(() => ["UNASSIGNED", ...sdrOptions], [sdrOptions]);
+  const [sdrFilter, setSdrFilter] = useState<string[]>([]);
+  const allSdrSelected = sdrFilter.length > 0 && sdrFilter.length === sdrFilterKeys.length;
+  const sdrFilterLabel =
+    sdrFilter.length === 0 || allSdrSelected
+      ? "Todos"
+      : sdrFilter.length === 1
+      ? (sdrFilter[0] === "UNASSIGNED" ? "Sin asignar" : sdrFilter[0])
+      : `${sdrFilter.length} seleccionados`;
+  const toggleSdrFilter = (key: string) => {
+    setSdrFilter((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
+  };
   const [linkedin, setLinkedin] = useState<ContactedFrom | "ALL">("ALL");
   const [search, setSearch] = useState("");
   const [stageDate, setStageDate] = useState<Date | undefined>(undefined);
@@ -98,8 +110,10 @@ export function KanbanBoard({ companies, onOpenDetail }: Props) {
     return companies.filter((c) => {
       if (c.status === "unqualified_post_meeting") return false;
       if (fit !== "ALL" && c.icp_fit !== fit) return false;
-      if (sdr === "UNASSIGNED" && c.sdr) return false;
-      if (sdr !== "ALL" && sdr !== "UNASSIGNED" && c.sdr !== sdr) return false;
+      if (sdrFilter.length > 0) {
+        const key = c.sdr ?? "UNASSIGNED";
+        if (!sdrFilter.includes(key)) return false;
+      }
       if (linkedin !== "ALL") {
         const accs = linkedinByCompany.get(c.id) ?? [];
         if (!accs.includes(linkedin)) return false;
@@ -117,7 +131,7 @@ export function KanbanBoard({ companies, onOpenDetail }: Props) {
       if (q && !c.company_name.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [companies, fit, sdr, linkedin, search, linkedinByCompany, stageDate, stageDateMode, stageDateByCompany]);
+  }, [companies, fit, sdrFilter, linkedin, search, linkedinByCompany, stageDate, stageDateMode, stageDateByCompany]);
 
   const byColumn = useMemo(() => {
     const m = new Map<CompanyStatus, Company[]>();
@@ -159,16 +173,40 @@ export function KanbanBoard({ companies, onOpenDetail }: Props) {
             </SelectContent>
           </Select>
         </div>
-        <div className="w-[140px]">
+        <div className="w-[150px]">
           <label className="text-[10px] text-muted-foreground block mb-1">SDR</label>
-          <Select value={sdr} onValueChange={(v) => setSdr(v as Sdr | "ALL" | "UNASSIGNED")}>
-            <SelectTrigger className="h-8 bg-background text-xs"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">Todos</SelectItem>
-              <SelectItem value="UNASSIGNED">Sin asignar</SelectItem>
-              {sdrOptions.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="h-8 w-full justify-between bg-background text-xs font-normal px-2">
+                <span className="truncate">{sdrFilterLabel}</span>
+                <ChevronDown className="h-3.5 w-3.5 opacity-60 shrink-0" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-56 p-2" align="start">
+              <div className="flex items-center justify-between mb-1.5 pb-1.5 border-b border-border">
+                <span className="text-[10px] font-semibold uppercase text-muted-foreground">SDR</span>
+                <button
+                  type="button"
+                  className="text-[10px] text-primary-foreground bg-primary px-1.5 py-0.5 rounded font-medium"
+                  onClick={() => setSdrFilter(allSdrSelected ? [] : sdrFilterKeys)}
+                >
+                  {allSdrSelected ? "Ninguno" : "Todos"}
+                </button>
+              </div>
+              <div className="space-y-1 max-h-56 overflow-y-auto">
+                <label className="flex items-center gap-2 text-xs cursor-pointer py-0.5">
+                  <Checkbox checked={sdrFilter.includes("UNASSIGNED")} onCheckedChange={() => toggleSdrFilter("UNASSIGNED")} />
+                  <span>Sin asignar</span>
+                </label>
+                {sdrOptions.map((s) => (
+                  <label key={s} className="flex items-center gap-2 text-xs cursor-pointer py-0.5">
+                    <Checkbox checked={sdrFilter.includes(s)} onCheckedChange={() => toggleSdrFilter(s)} />
+                    <span>{s}</span>
+                  </label>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
         <div className="w-[160px]">
           <label className="text-[10px] text-muted-foreground block mb-1">Cuenta LinkedIn</label>
