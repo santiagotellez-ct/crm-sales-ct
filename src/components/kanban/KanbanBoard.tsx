@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Company, CompanyStatus, STATUS_LABELS, Sdr, SDR_OPTIONS, IcpFit, FIT_OPTIONS, FIT_LABELS, ContactedFrom, CONTACTED_FROM_OPTIONS, Activity } from "@/types/company";
+import { useTeamMemberNames } from "@/hooks/useTeamMembers";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -46,6 +47,8 @@ export function KanbanBoard({ companies, onOpenDetail }: Props) {
   const { setStatus, scheduleMeeting, reassignCompany, activities } = useCompanyData();
   const [fit, setFit] = useState<IcpFit | "ALL">("ALL");
   const [sdr, setSdr] = useState<Sdr | "ALL" | "UNASSIGNED">("ALL");
+  const { sdrNames, isLoading: sdrLoading } = useTeamMemberNames();
+  const sdrOptions = sdrLoading || sdrNames.length === 0 ? SDR_OPTIONS : sdrNames;
   const [linkedin, setLinkedin] = useState<ContactedFrom | "ALL">("ALL");
   const [search, setSearch] = useState("");
   const [stageDate, setStageDate] = useState<Date | undefined>(undefined);
@@ -163,7 +166,7 @@ export function KanbanBoard({ companies, onOpenDetail }: Props) {
             <SelectContent>
               <SelectItem value="ALL">Todos</SelectItem>
               <SelectItem value="UNASSIGNED">Sin asignar</SelectItem>
-              {SDR_OPTIONS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+              {sdrOptions.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>

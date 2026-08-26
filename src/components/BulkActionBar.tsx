@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Send, Download, Ban, X, Trash2, UserPlus, Target, Building2 } from "lucide-react";
 import { Sdr, SDR_OPTIONS, IcpFit, FIT_OPTIONS, FIT_LABELS, CompanySize, SIZE_OPTIONS, SIZE_LABELS } from "@/types/company";
+import { useTeamMemberNames } from "@/hooks/useTeamMembers";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,6 +22,8 @@ interface BulkActionBarProps {
 }
 
 export function BulkActionBar({ selectedCount, onSendToAttio, onExportCsv, onDisqualify, onDelete, onClear, onBulkSdr, onBulkFit, onBulkSize }: BulkActionBarProps) {
+  const { sdrNames, isLoading: sdrLoading } = useTeamMemberNames();
+  const sdrOptions = sdrLoading || sdrNames.length === 0 ? SDR_OPTIONS : sdrNames;
   if (selectedCount === 0) return null;
 
   return (
@@ -35,7 +38,7 @@ export function BulkActionBar({ selectedCount, onSendToAttio, onExportCsv, onDis
         </DropdownMenuTrigger>
         <DropdownMenuContent>
           <DropdownMenuItem onClick={() => onBulkSdr(null)}>Sin asignar</DropdownMenuItem>
-          {SDR_OPTIONS.map((s) => (
+          {sdrOptions.map((s) => (
             <DropdownMenuItem key={s} onClick={() => onBulkSdr(s)}>{s}</DropdownMenuItem>
           ))}
         </DropdownMenuContent>

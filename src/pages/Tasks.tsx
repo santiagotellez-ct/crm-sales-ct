@@ -3,16 +3,19 @@ import { ArrowLeft, CheckCircle2 } from "lucide-react";
 import { format, isPast, isToday } from "date-fns";
 import { useCompanyData } from "@/hooks/useCompanyData";
 import { Sdr, SDR_OPTIONS } from "@/types/company";
+import { useTeamMemberNames } from "@/hooks/useTeamMembers";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 
 export default function Tasks() {
   const { tasks, toggleTask } = useCompanyData();
+  const { sdrNames, isLoading: sdrLoading } = useTeamMemberNames();
+  const sdrOptions = sdrLoading || sdrNames.length === 0 ? SDR_OPTIONS : sdrNames;
 
   const pending = tasks.filter((t) => !t.completed).sort((a, b) => a.due_at - b.due_at);
 
   const groups: { sdr: Sdr | "Sin asignar"; items: typeof pending }[] = [
-    ...SDR_OPTIONS.map((sdr) => ({
+    ...sdrOptions.map((sdr) => ({
       sdr: sdr as Sdr | "Sin asignar",
       items: pending.filter((t) => t.sdr === sdr),
     })),

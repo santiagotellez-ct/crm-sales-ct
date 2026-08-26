@@ -10,6 +10,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { AE_OPTIONS, AccountExecutive, SECONDARY_AE_OPTIONS, SecondaryAe } from "@/types/meeting";
 import { SDR_OPTIONS, Sdr, FIT_OPTIONS, FIT_LABELS, IcpFit, CompanySize, SIZE_OPTIONS, SIZE_LABELS } from "@/types/company";
+import { useTeamMemberNames } from "@/hooks/useTeamMembers";
 import { DealInput } from "@/types/deal";
 import { useCompanyData } from "@/hooks/useCompanyData";
 import { useDealsData } from "@/hooks/useDealsData";
@@ -37,6 +38,8 @@ export function DealDialog({ open, onOpenChange, onCreate, initialCompanyId }: P
   const { allCompanies } = useCompanyData();
   const { stages } = useDealsData();
   const { events: eventList } = useEventsData();
+  const { sdrNames, isLoading: sdrLoading } = useTeamMemberNames();
+  const sdrOptions = sdrLoading || sdrNames.length === 0 ? SDR_OPTIONS : sdrNames;
   const [companyId, setCompanyId] = useState<string>(initialCompanyId ?? "");
   const [dealName, setDealName] = useState<string>("");
   const [dealNameTouched, setDealNameTouched] = useState(false);
@@ -391,7 +394,7 @@ export function DealDialog({ open, onOpenChange, onCreate, initialCompanyId }: P
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="__none">Sin SDR</SelectItem>
-                      {SDR_OPTIONS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                      {sdrOptions.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
@@ -511,7 +514,7 @@ export function DealDialog({ open, onOpenChange, onCreate, initialCompanyId }: P
               <Select value={sdr} onValueChange={(v) => setSdr(v as Sdr)}>
                 <SelectTrigger><SelectValue placeholder="SDR" /></SelectTrigger>
                 <SelectContent>
-                  {SDR_OPTIONS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  {sdrOptions.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>

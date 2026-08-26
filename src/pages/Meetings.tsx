@@ -7,6 +7,7 @@ import { useDealsData } from "@/hooks/useDealsData";
 import { supabase } from "@/integrations/supabase/client";
 import { AE_OPTIONS, AccountExecutive } from "@/types/meeting";
 import { SDR_OPTIONS, Sdr } from "@/types/company";
+import { useTeamMemberNames } from "@/hooks/useTeamMembers";
 import { usePipeGoals, DEFAULT_AE_PIPE_GOALS, DEFAULT_SDR_PIPE_GOALS, PIPE_TEAM_WEEKLY_GOAL } from "@/hooks/usePipeGoals";
 import { useSdrMeetingGoals } from "@/hooks/useSdrMeetingGoals";
 import { sdrListForWeek } from "@/lib/sdrLists";
@@ -60,6 +61,8 @@ export default function Meetings() {
   const { meetings, meetingGoals, activities, setMeetingGoal, setMeetingOutcome, deleteMeeting, updateMeetingSchedule, updateMeetingAssignment } = useCompanyData();
   const { deals, stages } = useDealsData();
   const [stageHistory, setStageHistory] = useState<{ deal_id: string; stage_id: string; entered_at: number }[]>([]);
+  const { sdrNames, isLoading: sdrLoading } = useTeamMemberNames();
+  const sdrOptions = sdrLoading || sdrNames.length === 0 ? SDR_OPTIONS : sdrNames;
 
   useEffect(() => {
     const load = async () => {
@@ -1230,7 +1233,7 @@ export default function Meetings() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="__none__">— Sin SDR —</SelectItem>
-                          {SDR_OPTIONS.map((sdr) => (
+                          {sdrOptions.map((sdr) => (
                             <SelectItem key={sdr} value={sdr}>{sdr}</SelectItem>
                           ))}
                         </SelectContent>

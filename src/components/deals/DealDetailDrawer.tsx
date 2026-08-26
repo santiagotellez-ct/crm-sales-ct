@@ -12,6 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { AE_OPTIONS, AccountExecutive, SECONDARY_AE_OPTIONS, SecondaryAe } from "@/types/meeting";
 import { SDR_OPTIONS, Sdr, Contact } from "@/types/company";
+import { useTeamMemberNames } from "@/hooks/useTeamMembers";
 import { useCompanyData } from "@/hooks/useCompanyData";
 import { useEventsData } from "@/hooks/useEventsData";
 import { DEAL_CHECKLISTS, itemId } from "@/lib/dealChecklists";
@@ -47,6 +48,8 @@ export function DealDetailDrawer({
 }: Props) {
   const { allCompanies, updateCompany, addContact } = useCompanyData();
   const { events: eventList } = useEventsData();
+  const { sdrNames, isLoading: sdrLoading } = useTeamMemberNames();
+  const sdrOptions = sdrLoading || sdrNames.length === 0 ? SDR_OPTIONS : sdrNames;
   const company = allCompanies.find((c) => c.id === deal.company_id);
   const stage = stages.find((s) => s.id === deal.stage_id);
   const [editingName, setEditingName] = useState(false);
@@ -432,7 +435,7 @@ export function DealDetailDrawer({
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="__none">Sin SDR</SelectItem>
-                    {SDR_OPTIONS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                    {sdrOptions.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
