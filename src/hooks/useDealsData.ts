@@ -34,7 +34,7 @@ function mapTask(r: any): DealTask {
   };
 }
 
-function mapDeal(r: any, contactIds: string[], tasks: DealTask[]): Deal {
+function mapDeal(r: any, contactIds: string[], tasks: DealTask[], stageEnteredAt: number): Deal {
   return {
     id: r.id,
     name: r.name ?? r.company_name ?? "",
@@ -66,6 +66,7 @@ function mapDeal(r: any, contactIds: string[], tasks: DealTask[]): Deal {
     checklist: (r.checklist as Deal["checklist"]) ?? {},
     contact_ids: contactIds,
     created_at: new Date(r.created_at).getTime(),
+    stage_entered_at: stageEnteredAt,
     tasks,
     updated_at: r.updated_at ? new Date(r.updated_at).getTime() : new Date(r.created_at).getTime(),
   };
@@ -77,11 +78,12 @@ export function useDealsData() {
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
-    const [stagesRes, dealsRes, dcRes, dtRes] = await Promise.all([
+    const [stagesRes, dealsRes, dcRes, dtRes, dshRes] = await Promise.all([
       db.from("deal_stages").select("*").order("order", { ascending: true }),
       db.from("deals").select("*").order("created_at", { ascending: false }),
       db.from("deal_contacts").select("*"),
       db.from("deal_tasks").select("*").order("due_at", { ascending: true }),
+      db.from("deal_stage_history").select("*"),
     ]);
     const contactsByDeal = new Map<string, string[]>();
     (dcRes.data ?? []).forEach((r: any) => {
@@ -96,11 +98,21 @@ export function useDealsData() {
       arr.push(t);
       tasksByDeal.set(t.deal_id, arr);
     });
+    const historyByDeal = new Map<string, { stage_id: string; entered_at: string }[]>();
+    (dshRes.data ?? []).forEach((r: any) => {
+      const arr = historyByDeal.get(r.deal_id) ?? [];
+      arr.push({ stage_id: r.stage_id, entered_at: r.entered_at });
+      historyByDeal.set(r.deal_id, arr);
+    });
     setStages((stagesRes.data ?? []).map(mapStage));
     setDeals(
-      (dealsRes.data ?? []).map((r: any) =>
-        mapDeal(r, contactsByDeal.get(r.id) ?? [], tasksByDeal.get(r.id) ?? [])
-      )
+      (dealsRes.data ?? []).map((r: any) => {
+        const matches = (historyByDeal.get(r.id) ?? []).filter((h) => h.stage_id === r.stage_id);
+        const stageEnteredAt = matches.length > 0
+          ? Math.max(...matches.map((h) => new Date(h.entered_at).getTime()))
+          : new Date(r.created_at).getTime();
+        return mapDeal(r, contactsByDeal.get(r.id) ?? [], tasksByDeal.get(r.id) ?? [], stageEnteredAt);
+      })
     );
     setLoading(false);
   }, []);
@@ -164,7 +176,7 @@ export function useDealsData() {
         completed: false,
       });
       await refresh();
-      return mapDeal(dealRow, input.contact_ids, []);
+      return mapDeal(dealRow, input.contact_ids, [], new Date(dealRow.created_at).getTime());
     },
     [stages, refresh]
   );

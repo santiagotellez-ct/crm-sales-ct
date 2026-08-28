@@ -22,6 +22,7 @@ export function DealCard({ deal, onClick, requireTask = true }: Props) {
   const openTasks = deal.tasks.filter((t) => !t.completed);
   const nextTask = openTasks.sort((a, b) => a.due_at - b.due_at)[0];
   const hasTask = !!nextTask;
+  const daysInStage = Math.max(0, Math.floor((Date.now() - deal.stage_entered_at) / 86400000));
 
   return (
     <div
@@ -64,8 +65,9 @@ export function DealCard({ deal, onClick, requireTask = true }: Props) {
         </div>
       )}
 
-      <div className="text-[11px] text-muted-foreground mt-1">
-        Creado {format(new Date(deal.created_at), "dd MMM yyyy")}
+      <div className="text-[11px] text-muted-foreground mt-1 flex items-center justify-between">
+        <span>Creado {format(new Date(deal.created_at), "dd MMM yyyy")}</span>
+        <span title="Días en este stage">{daysInStage}d en stage</span>
       </div>
 
       <div className="flex items-center justify-between mt-2 pt-2 border-t border-border/60">

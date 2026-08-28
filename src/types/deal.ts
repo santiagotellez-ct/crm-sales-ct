@@ -56,6 +56,7 @@ export interface Deal {
   won_at: string | null;
   contact_ids: string[];
   created_at: number;
+  stage_entered_at: number;
   tasks: DealTask[];
   checklist: Record<string, ChecklistEntry | boolean>;
   updated_at: number;

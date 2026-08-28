@@ -10,6 +10,10 @@ function money(n: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
 }
 
+function normalizeName(name: string) {
+  return name.trim().toLowerCase();
+}
+
 interface WeeklyClosuresCardProps {
   year?: number;
   week?: number;
@@ -40,7 +44,15 @@ export function WeeklyClosuresCard({ year, week }: WeeklyClosuresCardProps = {})
     });
     const total = perAe.reduce((a, x) => a + x.value, 0);
     const totalCount = perAe.reduce((a, x) => a + x.count, 0);
-    return { perAe, total, totalCount };
+    const nameCounts = new Map<string, number>();
+    perAe.forEach((a) => a.deals.forEach((d) => {
+      const key = normalizeName(d.company_name);
+      nameCounts.set(key, (nameCounts.get(key) ?? 0) + 1);
+    }));
+    const duplicateNames = new Set(
+      [...nameCounts.entries()].filter(([, count]) => count > 1).map(([name]) => name)
+    );
+    return { perAe, total, totalCount, duplicateNames };
   }, [deals, year, week]);
 
   return (
@@ -80,12 +92,19 @@ export function WeeklyClosuresCard({ year, week }: WeeklyClosuresCardProps = {})
             <div className="text-[11px] text-muted-foreground mb-1">{a.count} deal(s)</div>
             {a.deals.length > 0 && (
               <div className="pt-1 border-t border-border/60 text-[11px] text-muted-foreground space-y-0.5 max-h-32 overflow-auto">
-                {a.deals.map((d) => (
-                  <div key={d.id} className="flex justify-between gap-2" title={d.name || undefined}>
-                    <span className="truncate">{d.company_name}</span>
-                    <span className="tabular-nums font-medium text-foreground">{money(d.value)}</span>
-                  </div>
-                ))}
+                {a.deals.map((d) => {
+                  const isDuplicate = data.duplicateNames.has(normalizeName(d.company_name));
+                  return (
+                    <div
+                      key={d.id}
+                      className={`flex justify-between gap-2 ${isDuplicate ? "text-destructive font-semibold" : ""}`}
+                      title={isDuplicate ? `Posible duplicado: "${d.company_name}" aparece más de una vez esta semana` : (d.name || undefined)}
+                    >
+                      <span className="truncate">{d.company_name}</span>
+                      <span className={`tabular-nums font-medium ${isDuplicate ? "text-destructive" : "text-foreground"}`}>{money(d.value)}</span>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

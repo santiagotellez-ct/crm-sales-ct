@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { MainNav } from "@/components/MainNav";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
+import { EventsManagerDialog } from "@/components/deals/EventsManagerDialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,11 +12,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, Users, ChevronDown, Settings } from "lucide-react";
+import { LogOut, Users, ChevronDown, Settings, CalendarDays } from "lucide-react";
 
 export function GlobalHeader() {
   const { profile, signOut } = useAuth();
   const navigate = useNavigate();
+  const [eventsOpen, setEventsOpen] = useState(false);
 
   async function handleSignOut() {
     await signOut();
@@ -48,6 +51,10 @@ export function GlobalHeader() {
                   <Settings className="h-4 w-4 mr-2" />
                   Configurar equipo
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setEventsOpen(true)}>
+                  <CalendarDays className="h-4 w-4 mr-2" />
+                  Eventos y experiencias
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col gap-0.5">
@@ -80,6 +87,7 @@ export function GlobalHeader() {
           )}
         </div>
       </div>
+      {profile && <EventsManagerDialog open={eventsOpen} onOpenChange={setEventsOpen} />}
     </div>
   );
 }

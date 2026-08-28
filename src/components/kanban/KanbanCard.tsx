@@ -1,5 +1,6 @@
 import { memo } from "react";
 import { Company, FIT_LABELS, ContactedFrom, SOURCE_LABELS } from "@/types/company";
+import { colorForSdr } from "@/lib/sdrColors";
 import { RotateCw } from "lucide-react";
 
 const FIT_COLOR: Record<string, string> = {
@@ -43,7 +44,7 @@ function Card({ company, linkedinAccounts, onClick, onReassign, daysInStage }: P
       <div className="flex items-center justify-between gap-1.5 flex-wrap">
         <div className="flex items-center gap-1 flex-wrap">
           {company.sdr ? (
-            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-secondary text-secondary-foreground">
+            <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded border ${colorForSdr(company.sdr)}`}>
               {company.sdr}
             </span>
           ) : (
