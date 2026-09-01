@@ -14,6 +14,7 @@ import Login from "./pages/Login.tsx";
 import AdminUsers from "./pages/AdminUsers.tsx";
 import TeamSettings from "./pages/TeamSettings.tsx";
 import { CompanyDataProvider } from "@/hooks/useCompanyData";
+import { EventsDataProvider } from "@/hooks/useEventsData";
 import { GlobalHeader } from "@/components/GlobalHeader";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute, AdminRoute } from "@/components/ProtectedRoute";
@@ -34,25 +35,27 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <CompanyDataProvider>
-                    <GlobalHeader />
-                    <Routes>
-                      <Route path="/" element={<Index />} />
-                      <Route path="/tasks" element={<Tasks />} />
-                      <Route path="/duplicates" element={<Duplicates />} />
-                      <Route path="/meetings" element={<Meetings />} />
-                      <Route path="/deals" element={<Deals />} />
-                      <Route path="/ae-tasks" element={<AeTasks />} />
-                      <Route path="/settings/team" element={<TeamSettings />} />
-                      <Route
-                        path="/admin/users"
-                        element={
-                          <AdminRoute>
-                            <AdminUsers />
-                          </AdminRoute>
-                        }
-                      />
-                      <Route path="*" element={<NotFound />} />
-                    </Routes>
+                    <EventsDataProvider>
+                      <GlobalHeader />
+                      <Routes>
+                        <Route path="/" element={<Index />} />
+                        <Route path="/tasks" element={<Tasks />} />
+                        <Route path="/duplicates" element={<Duplicates />} />
+                        <Route path="/meetings" element={<Meetings />} />
+                        <Route path="/deals" element={<Deals />} />
+                        <Route path="/ae-tasks" element={<AeTasks />} />
+                        <Route path="/settings/team" element={<TeamSettings />} />
+                        <Route
+                          path="/admin/users"
+                          element={
+                            <AdminRoute>
+                              <AdminUsers />
+                            </AdminRoute>
+                          }
+                        />
+                        <Route path="*" element={<NotFound />} />
+                      </Routes>
+                    </EventsDataProvider>
                   </CompanyDataProvider>
                 </ProtectedRoute>
               }

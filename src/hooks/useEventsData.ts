@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, createContext, useContext, ReactNode, createElement } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 const db = supabase as unknown as {
@@ -23,7 +23,7 @@ export interface EventExperience {
   total_slots: number;
 }
 
-export function useEventsData() {
+function useEventsDataInternal() {
   const [events, setEvents] = useState<EventRecord[]>([]);
   const [experiences, setExperiences] = useState<EventExperience[]>([]);
   const [loading, setLoading] = useState(true);
@@ -91,4 +91,18 @@ export function useEventsData() {
     createExperience, updateExperience, deleteExperience,
     refresh,
   };
+}
+
+type Ctx = ReturnType<typeof useEventsDataInternal>;
+const EventsDataContext = createContext<Ctx | null>(null);
+
+export function EventsDataProvider({ children }: { children: ReactNode }) {
+  const value = useEventsDataInternal();
+  return createElement(EventsDataContext.Provider, { value }, children);
+}
+
+export function useEventsData() {
+  const ctx = useContext(EventsDataContext);
+  if (!ctx) throw new Error("useEventsData must be used within EventsDataProvider");
+  return ctx;
 }
