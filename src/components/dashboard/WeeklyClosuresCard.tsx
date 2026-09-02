@@ -3,6 +3,7 @@ import { startOfWeek, endOfWeek } from "date-fns";
 import { useDealsData } from "@/hooks/useDealsData";
 import type { Deal } from "@/types/deal";
 import { AE_OPTIONS } from "@/types/meeting";
+import { useTeamMemberNames } from "@/hooks/useTeamMembers";
 import { isoWeekStart } from "@/lib/week";
 import { WEEKLY_TEAM_TARGET } from "@/lib/quarters";
 
@@ -21,6 +22,8 @@ interface WeeklyClosuresCardProps {
 
 export function WeeklyClosuresCard({ year, week }: WeeklyClosuresCardProps = {}) {
   const { deals } = useDealsData();
+  const { aeNames, isLoading: aeLoading } = useTeamMemberNames();
+  const aeOptions = aeLoading || aeNames.length === 0 ? AE_OPTIONS : [...aeNames, "Otro AE"];
 
   const data = useMemo(() => {
     const ref = year && week ? isoWeekStart(year, week) : new Date();
@@ -31,7 +34,7 @@ export function WeeklyClosuresCard({ year, week }: WeeklyClosuresCardProps = {})
       const t = new Date(d.won_at).getTime();
       return t >= s.getTime() && t <= e.getTime();
     };
-    const perAe = AE_OPTIONS.map((ae) => {
+    const perAe = aeOptions.map((ae) => {
       const closed = deals
         .filter((d) => d.account_executive === ae && inWeek(d))
         .sort((a, b) => b.value - a.value);
@@ -53,7 +56,7 @@ export function WeeklyClosuresCard({ year, week }: WeeklyClosuresCardProps = {})
       [...nameCounts.entries()].filter(([, count]) => count > 1).map(([name]) => name)
     );
     return { perAe, total, totalCount, duplicateNames };
-  }, [deals, year, week]);
+  }, [deals, year, week, aeOptions]);
 
   return (
     <div className="bg-card border-2 border-score-high/40 rounded-lg p-5">

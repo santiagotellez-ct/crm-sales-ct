@@ -22,6 +22,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { AE_OPTIONS, AccountExecutive, SECONDARY_AE_OPTIONS, SecondaryAe } from "@/types/meeting";
+import { useTeamMemberNames } from "@/hooks/useTeamMembers";
 import { toast } from "sonner";
 import { QUARTERS, QuarterKey, dealInQuarter, getQuarter } from "@/lib/quarters";
 
@@ -118,6 +119,8 @@ export default function Deals() {
     stages, deals, forecast, createDeal, updateDeal, deleteDeal,
     addDealTask, toggleDealTask, updateDealTask, deleteDealTask, updateStage,
   } = useDealsData();
+  const { aeNames, isLoading: aeLoading } = useTeamMemberNames();
+  const aeOptions = aeLoading || aeNames.length === 0 ? AE_OPTIONS : [...aeNames, "Otro AE"];
 
   const [createOpen, setCreateOpen] = useState(false);
   const [configOpen, setConfigOpen] = useState(false);
@@ -197,7 +200,7 @@ export default function Deals() {
   );
 
   const breakdown = useMemo(() => {
-    const aes = aeFilter.size > 0 ? Array.from(aeFilter) : AE_OPTIONS;
+    const aes = aeFilter.size > 0 ? Array.from(aeFilter) : aeOptions;
     const q = qFilter === "ALL" ? null : getQuarter(qFilter);
     return aes.map((ae) => {
       let aeDeals = deals.filter((d) => d.account_executive === ae);
@@ -216,7 +219,7 @@ export default function Deals() {
       const openPipe = aeDeals.filter((d) => openStageIds.has(d.stage_id)).reduce((a, d) => a + d.value, 0);
       return { ae, cerrado, openPipe };
     });
-  }, [deals, aeFilter, secondaryAeFilter, qFilter, eventFilter, closedStageIds, openStageIds]);
+  }, [deals, aeFilter, secondaryAeFilter, qFilter, eventFilter, closedStageIds, openStageIds, aeOptions]);
 
   const dealsByStage = useMemo(() => {
     const map = new Map<string, Deal[]>();
@@ -292,7 +295,7 @@ export default function Deals() {
             </div>
             <MultiSelectFilter<AccountExecutive>
               label="Filtrar por AE"
-              options={AE_OPTIONS}
+              options={aeOptions}
               selected={aeFilter}
               onChange={setAeFilter}
               width="w-[150px]"

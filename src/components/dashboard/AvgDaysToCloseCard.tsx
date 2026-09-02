@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { Deal, DealStage } from "@/types/deal";
 import { AE_OPTIONS } from "@/types/meeting";
+import { useTeamMemberNames } from "@/hooks/useTeamMembers";
 
 interface Props {
   deals: Deal[];
@@ -21,6 +22,9 @@ function daysToClose(deal: Deal): number {
 }
 
 export function AvgDaysToCloseCard({ deals, stages }: Props) {
+  const { aeNames, isLoading: aeLoading } = useTeamMemberNames();
+  const aeOptions = aeLoading || aeNames.length === 0 ? AE_OPTIONS : [...aeNames, "Otro AE"];
+
   const stats = useMemo<AeStats[]>(() => {
     const stageMap = new Map(stages.map((s) => [s.id, s]));
     const isWon = (stageId: string) => {
@@ -28,9 +32,7 @@ export function AvgDaysToCloseCard({ deals, stages }: Props) {
       return !!s && (s.is_won || s.name === "Commited");
     };
 
-    const aeList = AE_OPTIONS.length > 0 ? AE_OPTIONS : ["—"];
-
-    return aeList.map((ae) => {
+    return aeOptions.map((ae) => {
       const wonDeals = deals.filter(
         (d) => d.account_executive === ae && isWon(d.stage_id) && d.won_at != null
       );
@@ -45,7 +47,7 @@ export function AvgDaysToCloseCard({ deals, stages }: Props) {
         count: dayValues.length,
       };
     });
-  }, [deals, stages]);
+  }, [deals, stages, aeOptions]);
 
   const maxAvg = Math.max(...stats.filter((s) => !isNaN(s.avg)).map((s) => s.avg), 1);
 

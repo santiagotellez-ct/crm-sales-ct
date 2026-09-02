@@ -38,8 +38,9 @@ export function DealDialog({ open, onOpenChange, onCreate, initialCompanyId }: P
   const { allCompanies } = useCompanyData();
   const { stages } = useDealsData();
   const { events: eventList } = useEventsData();
-  const { sdrNames, isLoading: sdrLoading } = useTeamMemberNames();
-  const sdrOptions = sdrLoading || sdrNames.length === 0 ? SDR_OPTIONS : sdrNames;
+  const { sdrNames, aeNames, isLoading: teamLoading } = useTeamMemberNames();
+  const sdrOptions = teamLoading || sdrNames.length === 0 ? SDR_OPTIONS : sdrNames;
+  const aeOptions = teamLoading || aeNames.length === 0 ? AE_OPTIONS : [...aeNames, "Otro AE"];
   const [companyId, setCompanyId] = useState<string>(initialCompanyId ?? "");
   const [dealName, setDealName] = useState<string>("");
   const [dealNameTouched, setDealNameTouched] = useState(false);
@@ -484,7 +485,7 @@ export function DealDialog({ open, onOpenChange, onCreate, initialCompanyId }: P
               <Select value={ae} onValueChange={(v) => { setAe(v as AccountExecutive); if (v !== "Otro AE") setSecondaryAe(""); }}>
                 <SelectTrigger className={cn(errClass(errors.ae))}><SelectValue placeholder="AE" /></SelectTrigger>
                 <SelectContent>
-                  {AE_OPTIONS.map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+                  {aeOptions.map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}
                 </SelectContent>
               </Select>
               {submitted && errors.ae && <p className="text-xs text-destructive mt-1">Obligatorio</p>}

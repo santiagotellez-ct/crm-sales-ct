@@ -10,6 +10,7 @@ import { Deal, DealStage } from "@/types/deal";
 import { AE_OPTIONS } from "@/types/meeting";
 import { SDR_OPTIONS } from "@/types/company";
 import { useEventsData } from "@/hooks/useEventsData";
+import { useTeamMemberNames } from "@/hooks/useTeamMembers";
 import { Download } from "lucide-react";
 import { toast } from "sonner";
 
@@ -64,6 +65,8 @@ function money(n: number) {
 
 export function ExportDealsDialog({ open, onOpenChange, deals, stages }: Props) {
   const { events: eventList } = useEventsData();
+  const { aeNames, isLoading: teamLoading } = useTeamMemberNames();
+  const aeBaseOptions = teamLoading || aeNames.length === 0 ? AE_OPTIONS : [...aeNames, "Otro AE"];
   const eventOptionsWithNone = useMemo(() => {
     const set = new Set<string>(eventList.map((e) => e.name));
     deals.forEach((d) => { if (d.event) set.add(d.event); });
@@ -81,10 +84,10 @@ export function ExportDealsDialog({ open, onOpenChange, deals, stages }: Props) 
   }, [deals]);
 
   const aeOptions = useMemo(() => {
-    const set = new Set<string>(AE_OPTIONS as readonly string[]);
+    const set = new Set<string>(aeBaseOptions as readonly string[]);
     deals.forEach((d) => { if (d.account_executive) set.add(d.account_executive); });
     return Array.from(set).sort((a, b) => a.localeCompare(b));
-  }, [deals]);
+  }, [deals, aeBaseOptions]);
 
   const [from, setFrom] = useState<string>("");
   const [to, setTo] = useState<string>("");

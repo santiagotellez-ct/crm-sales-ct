@@ -4,6 +4,7 @@ import { ArrowLeft, CheckCircle2, Pencil, Check } from "lucide-react";
 import { format, isPast, isToday } from "date-fns";
 import { useDealsData } from "@/hooks/useDealsData";
 import { AE_OPTIONS } from "@/types/meeting";
+import { useTeamMemberNames } from "@/hooks/useTeamMembers";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -13,6 +14,8 @@ import { toast } from "sonner";
 
 export default function AeTasks() {
   const { deals, stages, toggleDealTask, addDealTask, updateDealTask } = useDealsData();
+  const { aeNames, isLoading: aeLoading } = useTeamMemberNames();
+  const aeOptions = aeLoading || aeNames.length === 0 ? AE_OPTIONS : [...aeNames, "Otro AE"];
   const [pendingNext, setPendingNext] = useState<{ deal: Deal; completedTitle: string } | null>(null);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
@@ -51,7 +54,7 @@ export default function AeTasks() {
       </header>
 
       <main className="max-w-[1400px] mx-auto px-6 py-5 space-y-6 pb-12">
-        {AE_OPTIONS.map((ae) => {
+        {aeOptions.map((ae) => {
           const list = items
             .filter((t) => (t.assignee ?? t.deal.account_executive) === ae)
             .sort((a, b) => a.due_at - b.due_at);

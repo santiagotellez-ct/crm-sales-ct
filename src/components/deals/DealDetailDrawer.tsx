@@ -48,8 +48,9 @@ export function DealDetailDrawer({
 }: Props) {
   const { allCompanies, updateCompany, addContact } = useCompanyData();
   const { events: eventList } = useEventsData();
-  const { sdrNames, isLoading: sdrLoading } = useTeamMemberNames();
-  const sdrOptions = sdrLoading || sdrNames.length === 0 ? SDR_OPTIONS : sdrNames;
+  const { sdrNames, aeNames, isLoading: teamLoading } = useTeamMemberNames();
+  const sdrOptions = teamLoading || sdrNames.length === 0 ? SDR_OPTIONS : sdrNames;
+  const aeOptions = teamLoading || aeNames.length === 0 ? AE_OPTIONS : [...aeNames, "Otro AE"];
   const company = allCompanies.find((c) => c.id === deal.company_id);
   const stage = stages.find((s) => s.id === deal.stage_id);
   const [editingName, setEditingName] = useState(false);
@@ -410,7 +411,7 @@ export function DealDetailDrawer({
                 <Select value={deal.account_executive} onValueChange={(v) => onUpdate(deal.id, { account_executive: v as AccountExecutive })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {AE_OPTIONS.map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+                    {aeOptions.map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
