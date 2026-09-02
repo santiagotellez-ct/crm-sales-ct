@@ -37,13 +37,16 @@ import {
   Pie,
 } from "recharts";
 
-const AE_COLORS: Record<AccountExecutive, string> = {
-  Nico: "hsl(217 91% 60%)",
-  Majo: "hsl(38 92% 50%)",
-  Santi: "hsl(142 71% 45%)",
-  Toqui: "hsl(280 70% 60%)",
-  "Otro AE": "hsl(220 9% 55%)",
-};
+function aeColor(ae: string): string {
+  const map: Record<string, string> = {
+    Nico: "hsl(217 91% 60%)",
+    Majo: "hsl(38 92% 50%)",
+    Santi: "hsl(142 71% 45%)",
+    Toqui: "hsl(280 70% 60%)",
+    "Otro AE": "hsl(220 9% 55%)",
+  };
+  return map[ae] ?? "hsl(220 9% 55%)";
+}
 
 const SDR_PIPE_COLORS: Record<string, string> = {
   "César": "hsl(199 89% 48%)",
@@ -61,8 +64,9 @@ export default function Meetings() {
   const { meetings, meetingGoals, activities, setMeetingGoal, setMeetingOutcome, deleteMeeting, updateMeetingSchedule, updateMeetingAssignment } = useCompanyData();
   const { deals, stages } = useDealsData();
   const [stageHistory, setStageHistory] = useState<{ deal_id: string; stage_id: string; entered_at: number }[]>([]);
-  const { sdrNames, isLoading: sdrLoading } = useTeamMemberNames();
-  const sdrOptions = sdrLoading || sdrNames.length === 0 ? SDR_OPTIONS : sdrNames;
+  const { sdrNames, aeNames, isLoading: teamLoading } = useTeamMemberNames();
+  const sdrOptions = teamLoading || sdrNames.length === 0 ? SDR_OPTIONS : sdrNames;
+  const aeOptions = teamLoading || aeNames.length === 0 ? AE_OPTIONS : [...aeNames, "Otro AE"];
 
   useEffect(() => {
     const load = async () => {
@@ -89,6 +93,7 @@ export default function Meetings() {
   const current = getIsoWeek(today);
   const [year, setYear] = useState(current.year);
   const [week, setWeek] = useState(current.week);
+  const isCurrentWeek = year === current.year && week === current.week;
   const [editingAe, setEditingAe] = useState<AccountExecutive | null>(null);
   const [editValue, setEditValue] = useState("");
   const { goalFor: pipeGoalFor, setGoal: setPipeGoal } = usePipeGoals(year, week);
@@ -176,13 +181,13 @@ export default function Meetings() {
 
   const weekData = useMemo(
     () =>
-      AE_OPTIONS.map((ae) => ({
+      aeOptions.map((ae) => ({
         ae,
         actual: actualFor(ae),
         meta: goalFor(ae),
         pct: goalFor(ae) > 0 ? Math.round((actualFor(ae) / goalFor(ae)) * 100) : 0,
       })),
-    [activeMeetings, meetingGoals, year, week]
+    [activeMeetings, meetingGoals, year, week, aeOptions]
   );
 
   // Pipe Ingresado: deals creados en la semana seleccionada por AEs,
@@ -232,11 +237,10 @@ export default function Meetings() {
       }
     }
 
-    const perAe: Record<AccountExecutive, { value: number; deals: { company: string; value: number; sdr: string | null }[] }> = {
-      Nico: { value: 0, deals: [] }, Majo: { value: 0, deals: [] },
-      Santi: { value: 0, deals: [] }, Toqui: { value: 0, deals: [] },
-      "Otro AE": { value: 0, deals: [] },
-    };
+    type AeBucket = { value: number; deals: { company: string; value: number; sdr: string | null }[] };
+    const perAe: Record<string, AeBucket> = Object.fromEntries(
+      aeOptions.map((ae): [string, AeBucket] => [ae, { value: 0, deals: [] }]),
+    );
     const counted = new Set<string>();
     for (const d of deals) {
       const createdInWeek = (() => {
@@ -261,7 +265,7 @@ export default function Meetings() {
       bucket.deals.push({ company: d.company_name, value: d.value, sdr: priorSdr?.sdr ?? null });
     }
     return perAe;
-  }, [deals, activeMeetings, year, week, stages, stageHistory]);
+  }, [deals, activeMeetings, year, week, stages, stageHistory, aeOptions]);
 
   // "Valor de Deal Generado" por reunión: suma de deals para esa empresa creados después de la reunión.
   const dealValueByMeeting = useMemo(() => {
@@ -347,7 +351,7 @@ export default function Meetings() {
 
             {/* Pipe Ingresado por AE */}
             {(() => {
-          const aes: AccountExecutive[] = ["Majo", "Santi", "Nico", "Toqui"];
+          const aes = aeOptions.filter((ae) => ae !== "Otro AE");
           const teamActual = aes.reduce((s, ae) => s + (pipeData[ae]?.value ?? 0), 0);
           const teamGoal = aes.reduce((s, ae) => s + pipeGoalFor("ae", ae), 0) || PIPE_TEAM_WEEKLY_GOAL;
           const teamPct = teamGoal > 0 ? Math.min(100, Math.round((teamActual / teamGoal) * 100)) : 0;
@@ -392,12 +396,12 @@ export default function Meetings() {
                     <div key={ae} className="bg-background border border-border rounded-lg p-3 space-y-2">
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-semibold text-foreground">{ae}</span>
-                        <span className="text-xs font-semibold px-2 py-0.5 rounded" style={{ background: `${AE_COLORS[ae]}20`, color: AE_COLORS[ae] }}>{pct}%</span>
+                        <span className="text-xs font-semibold px-2 py-0.5 rounded" style={{ background: `${aeColor(ae)}20`, color: aeColor(ae) }}>{pct}%</span>
                       </div>
                       <div className="text-xl font-bold tabular-nums text-foreground">{fmtMoney(actual)}</div>
                       {renderEditable(`ae:${ae}`, meta)}
                       <div className="h-1.5 bg-muted rounded overflow-hidden">
-                        <div className="h-full rounded" style={{ width: `${pct}%`, background: AE_COLORS[ae] }} />
+                        <div className="h-full rounded" style={{ width: `${pct}%`, background: aeColor(ae) }} />
                       </div>
                       {dealsList.length > 0 && (
                         <div className="pt-1 border-t border-border/60 text-[11px] text-muted-foreground space-y-0.5 max-h-32 overflow-auto">
@@ -437,7 +441,7 @@ export default function Meetings() {
             <p className="text-xs text-muted-foreground">Reuniones agendadas por cada AE vs su meta semanal (editable).</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {AE_OPTIONS.map((ae) => {
+            {aeOptions.map((ae) => {
               const aeMeetings = activeMeetings
                 .filter((m) => m.iso_year === year && m.iso_week === week && m.account_executive === ae)
                 .sort((a, b) => a.scheduled_at - b.scheduled_at);
@@ -451,7 +455,7 @@ export default function Meetings() {
                     <span className="text-sm font-semibold text-foreground">{ae}</span>
                     <span
                       className="text-xs font-semibold px-2 py-0.5 rounded"
-                      style={{ background: `${AE_COLORS[ae]}20`, color: AE_COLORS[ae] }}
+                      style={{ background: `${aeColor(ae)}20`, color: aeColor(ae) }}
                     >
                       {pct}%
                     </span>
@@ -490,7 +494,7 @@ export default function Meetings() {
                     </button>
                   )}
                   <div className="h-1.5 bg-muted rounded overflow-hidden">
-                    <div className="h-full rounded" style={{ width: `${pct}%`, background: AE_COLORS[ae] }} />
+                    <div className="h-full rounded" style={{ width: `${pct}%`, background: aeColor(ae) }} />
                   </div>
                   {aeMeetings.length > 0 && (
                     <div className="pt-1 border-t border-border/60 text-[11px] text-muted-foreground space-y-0.5 max-h-32 overflow-auto">
@@ -542,7 +546,7 @@ export default function Meetings() {
                 fromTs = weekStart.getTime();
                 toTs = fromTs + 7 * 86400000 - 1;
               }
-              const sdrList = sdrListForWeek(year, week);
+              const sdrList = isCurrentWeek ? sdrNames : [...new Set([...sdrListForWeek(year, week), ...sdrNames])];
               type Bucket = { contactadas: number; contactos: number; followups: number; agendadas: number; _agendadasNames: string[]; _contactadasNames: string[] };
               const buckets: Record<string, Bucket> = {};
               for (const s of sdrList) buckets[s] = { contactadas: 0, contactos: 0, followups: 0, agendadas: 0, _agendadasNames: [], _contactadasNames: [] };
@@ -722,7 +726,7 @@ export default function Meetings() {
             <p className="text-xs text-muted-foreground">Reuniones agendadas por cada SDR vs su meta semanal (editable).</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-            {[...new Set([...sdrListForWeek(year, week), "Self AE"])].map((sdr) => {
+            {(isCurrentWeek ? sdrNames : [...new Set([...sdrListForWeek(year, week), ...sdrNames])]).map((sdr) => {
               const sdrMeetings = activeMeetings.filter(
                 (m) => m.iso_year === year && m.iso_week === week && (m.sdr ?? "") === sdr
               ).sort((a, b) => a.scheduled_at - b.scheduled_at);
@@ -881,11 +885,11 @@ export default function Meetings() {
 
         {/* Pipe Ingresado semanal por AE */}
         {(() => {
-          const aes: AccountExecutive[] = ["Majo", "Santi", "Nico", "Toqui"];
+          const aes = aeOptions.filter((ae) => ae !== "Otro AE");
           // Pipe por SDR: usa el SDR previo asociado al deal
           const sdrActual: Record<string, number> = {};
           const sdrDeals: Record<string, { company: string; value: number }[]> = {};
-          const sdrList = sdrListForWeek(year, week);
+          const sdrList = isCurrentWeek ? sdrNames : [...new Set([...sdrListForWeek(year, week), ...sdrNames])];
           for (const ae of aes) {
             for (const d of pipeData[ae]?.deals ?? []) {
               const key = d.sdr && sdrList.includes(d.sdr) ? d.sdr : null;
@@ -952,7 +956,7 @@ export default function Meetings() {
                   const actual = sdrActual[sdr] ?? 0;
                   const meta = pipeGoalFor("sdr", sdr);
                   const pct = meta > 0 ? Math.min(100, Math.round((actual / meta) * 100)) : 0;
-                  const color = SDR_PIPE_COLORS[sdr];
+                  const color = SDR_PIPE_COLORS[sdr] ?? "hsl(220 9% 55%)";
                   const dealsList = sdrDeals[sdr] ?? [];
                   return (
                     <div key={sdr} className="bg-background border border-border rounded-lg p-3 space-y-2">
@@ -1019,7 +1023,7 @@ export default function Meetings() {
               ];
           const unqSorted = [...unqualified].sort((a, b) => b.scheduled_at - a.scheduled_at);
           // Per-SDR breakdown
-          const sdrList = sdrListForWeek(year, week);
+          const sdrList = isCurrentWeek ? sdrNames : [...new Set([...sdrListForWeek(year, week), ...sdrNames])];
           const perSdr = sdrList.map((sdr) => {
             const q = qualified.filter((m) => m.sdr === sdr).length;
             const u = unqualified.filter((m) => m.sdr === sdr).length;
@@ -1133,7 +1137,7 @@ export default function Meetings() {
                             <td className="px-3 py-2">
                               <span
                                 className="text-xs font-semibold px-2 py-0.5 rounded"
-                                style={{ background: `${AE_COLORS[m.account_executive]}20`, color: AE_COLORS[m.account_executive] }}
+                                style={{ background: `${aeColor(m.account_executive)}20`, color: aeColor(m.account_executive) }}
                               >
                                 {m.account_executive}
                               </span>
@@ -1212,12 +1216,12 @@ export default function Meetings() {
                       >
                         <SelectTrigger
                           className="h-7 px-2 text-xs w-auto min-w-fit whitespace-nowrap font-semibold border-0"
-                          style={{ background: `${AE_COLORS[m.account_executive]}20`, color: AE_COLORS[m.account_executive] }}
+                          style={{ background: `${aeColor(m.account_executive)}20`, color: aeColor(m.account_executive) }}
                         >
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {AE_OPTIONS.map((ae) => (
+                          {aeOptions.map((ae) => (
                             <SelectItem key={ae} value={ae}>{ae}</SelectItem>
                           ))}
                         </SelectContent>
