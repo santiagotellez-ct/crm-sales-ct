@@ -1,6 +1,6 @@
 import { AccountExecutive } from "@/types/meeting";
 
-export type QuarterKey = "ALL" | "Q4-2025" | "Q1-2026" | "Q2-2026" | "Q3-2026" | "Q4-2026";
+export type QuarterKey = "ALL" | "Q4-2025" | "Q1-2026" | "Q2-2026" | "Q3-2026";
 
 export interface Quarter {
   key: QuarterKey;
@@ -14,8 +14,7 @@ export const QUARTERS: Quarter[] = [
   { key: "Q4-2025", label: "Q4 2025 (antes 10 Ene)", start: new Date(0), end: new Date(2026, 0, 9, 23, 59, 59) },
   { key: "Q1-2026", label: "Q1 2026 (10 Ene–31 Mar)", start: new Date(2026, 0, 10), end: new Date(2026, 2, 31, 23, 59, 59) },
   { key: "Q2-2026", label: "Q2 2026 (1 Abr–7 Ago)", start: new Date(2026, 3, 1), end: new Date(2026, 7, 7, 23, 59, 59) },
-  { key: "Q3-2026", label: "Q3 2026 (8 Ago–31 Oct)", start: new Date(2026, 7, 8), end: new Date(2026, 9, 31, 23, 59, 59) },
-  { key: "Q4-2026", label: "Q4 2026 (1 Nov–28 Feb)", start: new Date(2026, 10, 1), end: new Date(2027, 1, 28, 23, 59, 59) },
+  { key: "Q3-2026", label: "Q3 2026 (8 Ago–10 Dic)", start: new Date(2026, 7, 8), end: new Date(2026, 11, 10, 23, 59, 59) },
 ];
 
 export const AE_QUARTER_TARGETS: Record<Exclude<QuarterKey, "ALL">, Partial<Record<AccountExecutive, number>>> = {
@@ -23,7 +22,6 @@ export const AE_QUARTER_TARGETS: Record<Exclude<QuarterKey, "ALL">, Partial<Reco
   "Q1-2026": {},
   "Q2-2026": { Toqui: 140000, Nico: 140000, Santi: 210000, Majo: 210000 },
   "Q3-2026": {},
-  "Q4-2026": {},
 };
 
 export function getQuarter(key: QuarterKey): Quarter {
