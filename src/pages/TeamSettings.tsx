@@ -14,6 +14,8 @@ import {
   TeamMemberRole,
   TeamMember,
 } from "@/hooks/useTeamMembers";
+import { useSdrMeetingGoals } from "@/hooks/useSdrMeetingGoals";
+import { getIsoWeek } from "@/lib/week";
 import { QUARTERS } from "@/lib/quarters";
 
 // ─── Member management ───────────────────────────────────────────────────────
@@ -137,9 +139,10 @@ function GoalCell({
 
 // ─── SDR Goals table ─────────────────────────────────────────────────────────
 
-function SdrGoalsTable({ members, onUpdate }: {
+function SdrGoalsTable({ members, onUpdate, goalFor }: {
   members: TeamMember[];
   onUpdate: (id: string, field: "pipe_goal" | "meeting_goal", value: number) => Promise<void>;
+  goalFor: (sdr: string) => number;
 }) {
   const sdrs = members.filter((m) => m.role === "sdr" && m.is_active);
   if (sdrs.length === 0) return <p className="text-xs text-muted-foreground italic">Sin SDRs activos</p>;
@@ -159,12 +162,17 @@ function SdrGoalsTable({ members, onUpdate }: {
             <tr key={m.id} className="border-b border-border/40 hover:bg-muted/30 transition-colors">
               <td className="py-2 pr-4 font-medium text-foreground">{m.name}</td>
               <td className="py-2 px-3">
-                <div className="flex justify-end">
+                <div className="flex flex-col items-end gap-0.5">
                   <GoalCell
-                    value={m.meeting_goal}
+                    value={goalFor(m.name)}
                     onSave={(v) => onUpdate(m.id, "meeting_goal", v)}
                     placeholder="0 (sin meta base)"
                   />
+                  {goalFor(m.name) !== m.meeting_goal && (
+                    <span className="text-[10px] text-muted-foreground">
+                      meta base: {m.meeting_goal > 0 ? m.meeting_goal : "0 (sin configurar)"}
+                    </span>
+                  )}
                 </div>
               </td>
               <td className="py-2 pl-3">
@@ -258,6 +266,8 @@ export default function TeamSettings() {
   const toggleMember = useToggleTeamMember();
   const updateGoal = useUpdateTeamMemberGoal();
   const setAeTarget = useSetAeTarget();
+  const { year: currentYear, week: currentWeek } = getIsoWeek(new Date());
+  const { goalFor: sdrMeetGoalFor } = useSdrMeetingGoals(currentYear, currentWeek);
 
   const handleAdd = async (role: TeamMemberRole, name: string, email?: string) => {
     try {
@@ -393,6 +403,7 @@ export default function TeamSettings() {
               <SdrGoalsTable
                 members={members}
                 onUpdate={handleUpdateGoal}
+                goalFor={sdrMeetGoalFor}
               />
             </div>
 
