@@ -819,14 +819,22 @@ export default function Meetings() {
         </section>
 
         {(() => {
-          const totalActual = weekData.reduce((s, d) => s + d.actual, 0);
-          const totalTarget = weekData.reduce((s, d) => s + d.meta, 0);
-          const pct = totalTarget > 0 ? Math.round((totalActual / totalTarget) * 100) : 0;
-          const achieved = Math.min(totalActual, totalTarget);
-          const remaining = Math.max(0, totalTarget - totalActual);
-          const over = Math.max(0, totalActual - totalTarget);
+          const sdrList = isCurrentWeek ? sdrNames : [...new Set([...sdrListForWeek(year, week), ...sdrNames])];
+          const totalSdrActual = sdrList.reduce(
+            (s, sdr) =>
+              s +
+              activeMeetings.filter(
+                (m) => m.iso_year === year && m.iso_week === week && (m.sdr ?? "") === sdr
+              ).length,
+            0
+          );
+          const totalSdrTarget = sdrList.reduce((s, sdr) => s + sdrMeetGoalFor(sdr), 0);
+          const pct = totalSdrTarget > 0 ? Math.round((totalSdrActual / totalSdrTarget) * 100) : 0;
+          const achieved = Math.min(totalSdrActual, totalSdrTarget);
+          const remaining = Math.max(0, totalSdrTarget - totalSdrActual);
+          const over = Math.max(0, totalSdrActual - totalSdrTarget);
           const pieData =
-            totalTarget === 0
+            totalSdrTarget === 0
               ? [{ name: "Sin meta definida", value: 1, fill: "hsl(var(--muted))" }]
               : over > 0
                 ? [
@@ -841,7 +849,7 @@ export default function Meetings() {
             <section className="bg-card border border-border rounded-lg p-4">
               <h2 className="text-sm font-semibold text-foreground mb-1">Cumplimiento global · Semana {week}</h2>
               <p className="text-xs text-muted-foreground mb-3">
-                Total reuniones agendadas vs meta global (suma de metas de todos los AE)
+                Total reuniones agendadas vs meta global (suma de metas de todos los SDRs)
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
                 <ResponsiveContainer width="100%" height={260}>
@@ -866,15 +874,15 @@ export default function Meetings() {
                 <div className="space-y-2">
                   <div className="text-5xl font-bold text-foreground tabular-nums">{pct}%</div>
                   <div className="text-sm text-muted-foreground">
-                    <span className="font-semibold text-foreground tabular-nums">{totalActual}</span> de{" "}
-                    <span className="font-semibold text-foreground tabular-nums">{totalTarget}</span> reuniones meta
+                    <span className="font-semibold text-foreground tabular-nums">{totalSdrActual}</span> de{" "}
+                    <span className="font-semibold text-foreground tabular-nums">{totalSdrTarget}</span> reuniones meta
                   </div>
                   {over > 0 && (
                     <div className="text-xs text-primary font-medium">
                       +{over} sobre la meta
                     </div>
                   )}
-                  {totalTarget === 0 && (
+                  {totalSdrTarget === 0 && (
                     <div className="text-xs text-muted-foreground">Define metas semanales para ver el cumplimiento.</div>
                   )}
                 </div>

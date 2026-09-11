@@ -163,7 +163,7 @@ function SdrGoalsTable({ members, onUpdate }: {
                   <GoalCell
                     value={m.meeting_goal}
                     onSave={(v) => onUpdate(m.id, "meeting_goal", v)}
-                    placeholder="sin meta"
+                    placeholder="0 (sin meta base)"
                   />
                 </div>
               </td>
@@ -387,7 +387,7 @@ export default function TeamSettings() {
               <div>
                 <h3 className="text-sm font-semibold text-foreground">SDRs</h3>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Meta semanal de reuniones agendadas y de pipeline generado. Click en un número para editar.
+                  Meta base semanal por SDR. Se puede sobreescribir semana a semana desde el Dashboard SDR.
                 </p>
               </div>
               <SdrGoalsTable
