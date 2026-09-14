@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AE_OPTIONS, AccountExecutive } from "@/types/meeting";
 import { getIsoWeek } from "@/lib/week";
-import { AE_EMAILS } from "@/lib/aeEmails";
+import { useTeamMembers, useTeamMemberNames } from "@/hooks/useTeamMembers";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Contact } from "@/types/company";
 
@@ -45,6 +45,9 @@ function toTimeInput(d: Date) {
 
 export function ScheduleMeetingDialog({ open, companyName, contacts = [], onOpenChange, onConfirm, onCancel }: Props) {
   const initial = defaultDate();
+  const { data: members = [] } = useTeamMembers();
+  const { aeNames, isLoading: teamLoading } = useTeamMemberNames();
+  const aeOptions = teamLoading || aeNames.length === 0 ? AE_OPTIONS : [...aeNames, "Otro AE"];
   const [date, setDate] = useState(toDateInput(initial));
   const [time, setTime] = useState(toTimeInput(initial));
   const [ae, setAe] = useState<AccountExecutive | "">("");
@@ -70,7 +73,9 @@ export function ScheduleMeetingDialog({ open, companyName, contacts = [], onOpen
   }, [open, contacts]);
 
   const combined = new Date(`${date}T${time}`);
-  const aeEmail = ae === "Otro AE" ? otherAeEmail.trim() : ae ? AE_EMAILS[ae] : "";
+  const aeEmail = ae === "Otro AE"
+    ? otherAeEmail.trim()
+    : ae ? members.find((m) => m.name === ae)?.email ?? "" : "";
   const validEmail = aeEmail === "" || /\S+@\S+\.\S+/.test(aeEmail);
   const valid = alreadyHappened
     ? !!ae
@@ -157,12 +162,12 @@ export function ScheduleMeetingDialog({ open, companyName, contacts = [], onOpen
             <Select value={ae} onValueChange={(v) => setAe(v as AccountExecutive)}>
               <SelectTrigger><SelectValue placeholder="Selecciona AE" /></SelectTrigger>
               <SelectContent>
-                {AE_OPTIONS.map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+                {aeOptions.map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
           {!alreadyHappened && ae && ae !== "Otro AE" && (
-            <p className="text-xs text-muted-foreground">Invita a {AE_EMAILS[ae]}</p>
+            <p className="text-xs text-muted-foreground">Invita a {members.find((m) => m.name === ae)?.email ?? "—"}</p>
           )}
           {!alreadyHappened && ae === "Otro AE" && (
             <div>
