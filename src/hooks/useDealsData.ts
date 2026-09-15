@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Deal, DealInput, DealStage, DealTask } from "@/types/deal";
 import { AccountExecutive, SecondaryAe } from "@/types/meeting";
 import { Sdr } from "@/types/company";
+import { toast } from "sonner";
 
 // Supabase typegen lags new tables; cast through any.
 const db = supabase as unknown as {
@@ -229,13 +230,18 @@ export function useDealsData() {
 
   const addDealTask = useCallback(
     async (dealId: string, title: string, dueAt: number, assignee: AccountExecutive | null) => {
-      await db.from("deal_tasks").insert({
+      const { error } = await db.from("deal_tasks").insert({
         deal_id: dealId,
         title,
         due_at: new Date(dueAt).toISOString(),
         assignee,
         completed: false,
       });
+      if (error) {
+        console.error("addDealTask failed", error);
+        toast.error(`No se pudo crear la tarea: ${error.message}`);
+        return;
+      }
       await refresh();
     },
     [refresh]
