@@ -12,6 +12,25 @@ const db = supabase as unknown as {
   removeChannel: (c: any) => void;
 };
 
+// Supabase/PostgREST caps a single response at the project's db-max-rows
+// setting (1000 by default) — a client-side .limit() above that is ignored
+// by the server. Tables that keep growing (deal_tasks, deal_stage_history)
+// need real pagination via .range() to fetch everything.
+const MAX_PAGE_SIZE = 1000;
+
+async function fetchAllRows(table: string, applyOrder: (q: any) => any) {
+  const rows: any[] = [];
+  let from = 0;
+  for (;;) {
+    const { data, error } = await applyOrder(db.from(table).select("*")).range(from, from + MAX_PAGE_SIZE - 1);
+    if (error) return { data: null, error };
+    rows.push(...(data ?? []));
+    if (!data || data.length < MAX_PAGE_SIZE) break;
+    from += MAX_PAGE_SIZE;
+  }
+  return { data: rows, error: null };
+}
+
 function mapStage(r: any): DealStage {
   return {
     id: r.id,
@@ -79,43 +98,49 @@ export function useDealsData() {
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
-    const [stagesRes, dealsRes, dcRes, dtRes, dshRes] = await Promise.all([
-      db.from("deal_stages").select("*").order("order", { ascending: true }),
-      db.from("deals").select("*").order("created_at", { ascending: false }),
-      db.from("deal_contacts").select("*"),
-      db.from("deal_tasks").select("*").order("due_at", { ascending: true }),
-      db.from("deal_stage_history").select("*"),
-    ]);
-    const contactsByDeal = new Map<string, string[]>();
-    (dcRes.data ?? []).forEach((r: any) => {
-      const arr = contactsByDeal.get(r.deal_id) ?? [];
-      arr.push(r.contact_id);
-      contactsByDeal.set(r.deal_id, arr);
-    });
-    const tasksByDeal = new Map<string, DealTask[]>();
-    (dtRes.data ?? []).forEach((r: any) => {
-      const t = mapTask(r);
-      const arr = tasksByDeal.get(t.deal_id) ?? [];
-      arr.push(t);
-      tasksByDeal.set(t.deal_id, arr);
-    });
-    const historyByDeal = new Map<string, { stage_id: string; entered_at: string }[]>();
-    (dshRes.data ?? []).forEach((r: any) => {
-      const arr = historyByDeal.get(r.deal_id) ?? [];
-      arr.push({ stage_id: r.stage_id, entered_at: r.entered_at });
-      historyByDeal.set(r.deal_id, arr);
-    });
-    setStages((stagesRes.data ?? []).map(mapStage));
-    setDeals(
-      (dealsRes.data ?? []).map((r: any) => {
-        const matches = (historyByDeal.get(r.id) ?? []).filter((h) => h.stage_id === r.stage_id);
-        const stageEnteredAt = matches.length > 0
-          ? Math.max(...matches.map((h) => new Date(h.entered_at).getTime()))
-          : new Date(r.created_at).getTime();
-        return mapDeal(r, contactsByDeal.get(r.id) ?? [], tasksByDeal.get(r.id) ?? [], stageEnteredAt);
-      })
-    );
-    setLoading(false);
+    try {
+      const [stagesRes, dealsRes, dcRes, dtRes, dshRes] = await Promise.all([
+        db.from("deal_stages").select("*").order("order", { ascending: true }),
+        fetchAllRows("deals", (q) => q.order("created_at", { ascending: false }).order("id", { ascending: true })),
+        fetchAllRows("deal_contacts", (q) => q.order("deal_id", { ascending: true }).order("contact_id", { ascending: true })),
+        fetchAllRows("deal_tasks", (q) => q.order("due_at", { ascending: true }).order("id", { ascending: true })),
+        fetchAllRows("deal_stage_history", (q) => q.order("id", { ascending: true })),
+      ]);
+      const contactsByDeal = new Map<string, string[]>();
+      (dcRes.data ?? []).forEach((r: any) => {
+        const arr = contactsByDeal.get(r.deal_id) ?? [];
+        arr.push(r.contact_id);
+        contactsByDeal.set(r.deal_id, arr);
+      });
+      const tasksByDeal = new Map<string, DealTask[]>();
+      (dtRes.data ?? []).forEach((r: any) => {
+        const t = mapTask(r);
+        const arr = tasksByDeal.get(t.deal_id) ?? [];
+        arr.push(t);
+        tasksByDeal.set(t.deal_id, arr);
+      });
+      const historyByDeal = new Map<string, { stage_id: string; entered_at: string }[]>();
+      (dshRes.data ?? []).forEach((r: any) => {
+        const arr = historyByDeal.get(r.deal_id) ?? [];
+        arr.push({ stage_id: r.stage_id, entered_at: r.entered_at });
+        historyByDeal.set(r.deal_id, arr);
+      });
+      setStages((stagesRes.data ?? []).map(mapStage));
+      setDeals(
+        (dealsRes.data ?? []).map((r: any) => {
+          const matches = (historyByDeal.get(r.id) ?? []).filter((h) => h.stage_id === r.stage_id);
+          const stageEnteredAt = matches.length > 0
+            ? Math.max(...matches.map((h) => new Date(h.entered_at).getTime()))
+            : new Date(r.created_at).getTime();
+          return mapDeal(r, contactsByDeal.get(r.id) ?? [], tasksByDeal.get(r.id) ?? [], stageEnteredAt);
+        })
+      );
+    } catch (err) {
+      console.error("refresh failed", err);
+      toast.error("No se pudieron cargar los deals — reintenta o recarga la página");
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -230,10 +255,11 @@ export function useDealsData() {
 
   const addDealTask = useCallback(
     async (dealId: string, title: string, dueAt: number, assignee: AccountExecutive | null) => {
+      const due_at = new Date(dueAt).toISOString();
       const { error } = await db.from("deal_tasks").insert({
         deal_id: dealId,
         title,
-        due_at: new Date(dueAt).toISOString(),
+        due_at,
         assignee,
         completed: false,
       });
@@ -243,6 +269,7 @@ export function useDealsData() {
         return;
       }
       await refresh();
+      toast.success("Tarea creada");
     },
     [refresh]
   );
