@@ -26,7 +26,7 @@ function fallbackSdrStages(): PipelineStage[] {
     label: CONTACT_STATUS_LABELS[key],
     kind: (["reagendar"].includes(key)
       ? "special"
-      : ["en_nutricion", "no_interesado", "unqualified"].includes(key)
+      : ["no_answer", "no_interesado", "unqualified"].includes(key)
       ? "exit"
       : "main") as PipelineStage["kind"],
     sort_order: i + 1,

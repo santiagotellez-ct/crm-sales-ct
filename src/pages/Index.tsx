@@ -48,7 +48,7 @@ export default function Index() {
         <div className="max-w-[1400px] mx-auto px-6 py-4 flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold text-foreground">Colombia Tech Week CRM</h1>
-            <p className="text-xs text-muted-foreground mt-0.5">Pipeline SDR · por contacto</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Pipeline SDR · por contacto (mismas etapas)</p>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground">

@@ -1,68 +1,71 @@
--- Phase B cutover: activate spec SDR stages, deactivate legacy FU columns,
--- dual-write companies.status from best contact progress.
+-- Phase B cutover (revised): contact-grain kanban, KEEP current Sales stages.
+-- Does NOT activate touch_point_* / caliente / reunion_agendada / en_nutricion.
+-- If a previous draft of this migration flipped stages, this restores the team pipeline.
 
--- ─── Stage catalog flip ─────────────────────────────────────────────────────
+-- ─── Restore / lock current Sales SDR stages ────────────────────────────────
 UPDATE public.pipeline_stages
 SET is_active = true
 WHERE pipeline = 'sdr'
   AND key IN (
-    'touch_point_2', 'touch_point_3', 'touch_point_4', 'touch_point_5', 'touch_point_6',
-    'caliente', 'reunion_agendada', 'en_nutricion'
+    'por_contactar', 'contactado', 'follow_up_1', 'follow_up_2', 'en_conversacion',
+    'agendado', 'reagendar', 'unqualified', 'no_interesado', 'no_answer',
+    'unqualified_post_meeting'
   );
 
 UPDATE public.pipeline_stages
 SET is_active = false
 WHERE pipeline = 'sdr'
   AND key IN (
-    'follow_up_1', 'follow_up_2', 'en_conversacion', 'agendado', 'no_answer',
-    'unqualified_post_meeting'
+    'touch_point_2', 'touch_point_3', 'touch_point_4', 'touch_point_5', 'touch_point_6',
+    'caliente', 'reunion_agendada', 'en_nutricion'
   );
 
--- Keep por_contactar, contactado, reagendar, unqualified, no_interesado active.
-
--- ─── Rank helper for "best" contact stage (§3.4 company summary) ─────────────
-CREATE OR REPLACE FUNCTION public.contact_status_rank(p_status text)
-RETURNS integer
-LANGUAGE sql
-IMMUTABLE
-AS $$
-  SELECT CASE COALESCE(NULLIF(TRIM(p_status), ''), 'por_contactar')
-    WHEN 'unqualified' THEN 0
-    WHEN 'unqualified_post_meeting' THEN 0
-    WHEN 'no_interesado' THEN 1
-    WHEN 'en_nutricion' THEN 2
-    WHEN 'no_answer' THEN 2
-    WHEN 'por_contactar' THEN 10
-    WHEN 'contactado' THEN 20
-    WHEN 'follow_up_1' THEN 30
-    WHEN 'touch_point_2' THEN 30
-    WHEN 'follow_up_2' THEN 40
-    WHEN 'touch_point_3' THEN 40
-    WHEN 'en_conversacion' THEN 50
-    WHEN 'touch_point_4' THEN 50
-    WHEN 'touch_point_5' THEN 60
-    WHEN 'touch_point_6' THEN 70
-    WHEN 'reagendar' THEN 75
-    WHEN 'caliente' THEN 80
-    WHEN 'agendado' THEN 90
-    WHEN 'reunion_agendada' THEN 90
-    ELSE 5
-  END;
-$$;
-
+-- Map any accidental spec keys (from Phase A tests / prior draft) back to team keys
 CREATE OR REPLACE FUNCTION public.normalize_contact_status(p_status text)
 RETURNS text
 LANGUAGE sql
 IMMUTABLE
 AS $$
   SELECT CASE COALESCE(NULLIF(TRIM(p_status), ''), 'por_contactar')
-    WHEN 'follow_up_1' THEN 'touch_point_2'
-    WHEN 'follow_up_2' THEN 'touch_point_3'
-    WHEN 'en_conversacion' THEN 'touch_point_4'
-    WHEN 'agendado' THEN 'reunion_agendada'
-    WHEN 'no_answer' THEN 'en_nutricion'
-    WHEN 'unqualified_post_meeting' THEN 'unqualified'
+    WHEN 'touch_point_2' THEN 'follow_up_1'
+    WHEN 'touch_point_3' THEN 'follow_up_2'
+    WHEN 'touch_point_4' THEN 'en_conversacion'
+    WHEN 'touch_point_5' THEN 'en_conversacion'
+    WHEN 'touch_point_6' THEN 'en_conversacion'
+    WHEN 'caliente' THEN 'en_conversacion'
+    WHEN 'reunion_agendada' THEN 'agendado'
+    WHEN 'en_nutricion' THEN 'no_answer'
     ELSE COALESCE(NULLIF(TRIM(p_status), ''), 'por_contactar')
+  END;
+$$;
+
+UPDATE public.contacts
+SET status = public.normalize_contact_status(status)
+WHERE status IS DISTINCT FROM public.normalize_contact_status(status);
+
+UPDATE public.companies
+SET status = public.normalize_contact_status(status)
+WHERE status IS DISTINCT FROM public.normalize_contact_status(status);
+
+-- ─── Rank for company summary = best contact (current Sales keys) ───────────
+CREATE OR REPLACE FUNCTION public.contact_status_rank(p_status text)
+RETURNS integer
+LANGUAGE sql
+IMMUTABLE
+AS $$
+  SELECT CASE public.normalize_contact_status(p_status)
+    WHEN 'unqualified' THEN 0
+    WHEN 'unqualified_post_meeting' THEN 0
+    WHEN 'no_interesado' THEN 1
+    WHEN 'no_answer' THEN 2
+    WHEN 'por_contactar' THEN 10
+    WHEN 'contactado' THEN 20
+    WHEN 'follow_up_1' THEN 30
+    WHEN 'follow_up_2' THEN 40
+    WHEN 'en_conversacion' THEN 50
+    WHEN 'reagendar' THEN 55
+    WHEN 'agendado' THEN 90
+    ELSE 5
   END;
 $$;
 
@@ -75,7 +78,7 @@ AS $$
 DECLARE
   v_best text;
 BEGIN
-  SELECT c.status INTO v_best
+  SELECT public.normalize_contact_status(c.status) INTO v_best
   FROM public.contacts c
   WHERE c.company_id = p_company_id
     AND c.archived_at IS NULL
@@ -85,8 +88,6 @@ BEGIN
   IF v_best IS NULL THEN
     RETURN NULL;
   END IF;
-
-  v_best := public.normalize_contact_status(v_best);
 
   UPDATE public.companies
   SET
@@ -102,7 +103,7 @@ $$;
 GRANT EXECUTE ON FUNCTION public.refresh_company_status_from_contacts(uuid)
   TO anon, authenticated, service_role;
 
--- ─── apply_touch: dual-write company summary after contact advance ──────────
+-- ─── apply_touch: advance on CURRENT Sales ladder (not TP*) ─────────────────
 CREATE OR REPLACE FUNCTION public.apply_touch_to_contact(
   p_contact_id uuid,
   p_channel text DEFAULT NULL,
@@ -137,19 +138,15 @@ BEGIN
     RAISE EXCEPTION 'contact not found: %', p_contact_id;
   END IF;
 
-  v_effective := COALESCE(NULLIF(TRIM(v_contact.status), ''), 'por_contactar');
+  v_effective := public.normalize_contact_status(v_contact.status);
 
+  -- Same pipeline Sales uses today
   v_next := CASE v_effective
-    WHEN 'por_contactar'    THEN 'contactado'
-    WHEN 'contactado'       THEN 'touch_point_2'
-    WHEN 'follow_up_1'      THEN 'touch_point_2'
-    WHEN 'follow_up_2'      THEN 'touch_point_3'
-    WHEN 'en_conversacion'  THEN 'touch_point_4'
-    WHEN 'touch_point_2'    THEN 'touch_point_3'
-    WHEN 'touch_point_3'    THEN 'touch_point_4'
-    WHEN 'touch_point_4'    THEN 'touch_point_5'
-    WHEN 'touch_point_5'    THEN 'touch_point_6'
-    WHEN 'touch_point_6'    THEN NULL
+    WHEN 'por_contactar'   THEN 'contactado'
+    WHEN 'contactado'      THEN 'follow_up_1'
+    WHEN 'follow_up_1'     THEN 'follow_up_2'
+    WHEN 'follow_up_2'     THEN 'en_conversacion'
+    WHEN 'en_conversacion' THEN NULL
     ELSE NULL
   END;
 
@@ -179,6 +176,11 @@ BEGIN
     UPDATE public.contacts
     SET sdr = NULLIF(TRIM(p_sdr), '')
     WHERE id = v_contact.id;
+  ELSIF v_effective IS DISTINCT FROM COALESCE(NULLIF(TRIM(v_contact.status), ''), 'por_contactar') THEN
+    -- Heal stored spec keys to team keys even when not advancing
+    UPDATE public.contacts
+    SET status = v_effective
+    WHERE id = v_contact.id;
   END IF;
 
   v_company_status := public.refresh_company_status_from_contacts(v_contact.company_id);
@@ -196,9 +198,8 @@ END;
 $$;
 
 COMMENT ON FUNCTION public.apply_touch_to_contact IS
-  'Inserts a touch, advances contacts.status on the touch ladder, refreshes companies.status from best contact.';
+  'Inserts a touch and advances contacts.status on the current Sales ladder (FU1/FU2/…). Refreshes companies.status from best contact.';
 
--- Explicit contact stage change (Caliente / Agendar / discard / drag specials)
 CREATE OR REPLACE FUNCTION public.set_contact_status(
   p_contact_id uuid,
   p_status text,
@@ -224,7 +225,7 @@ BEGIN
     RAISE EXCEPTION 'contact not found: %', p_contact_id;
   END IF;
 
-  v_from := COALESCE(NULLIF(TRIM(v_contact.status), ''), 'por_contactar');
+  v_from := public.normalize_contact_status(v_contact.status);
   v_to := public.normalize_contact_status(p_status);
 
   UPDATE public.contacts
@@ -253,12 +254,7 @@ $$;
 GRANT EXECUTE ON FUNCTION public.set_contact_status(uuid, text, text)
   TO anon, authenticated, service_role;
 
--- One-shot: normalize existing contact statuses into spec keys (display + RPC)
-UPDATE public.contacts
-SET status = public.normalize_contact_status(status)
-WHERE status IS DISTINCT FROM public.normalize_contact_status(status);
-
--- Refresh company summaries from contacts (batched via SQL)
+-- Refresh company summaries once
 DO $$
 DECLARE
   r record;

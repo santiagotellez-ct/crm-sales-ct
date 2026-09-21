@@ -40,78 +40,75 @@ export type CompanyStatus =
   | "reunion_agendada"
   | "en_nutricion";
 
-/** Spec SDR ladder used by the contact kanban (Phase B cutover). */
+/**
+ * Contact kanban uses the SAME columns Sales already knows.
+ * Spec keys (TP*/caliente) stay dormant until a future remap.
+ */
 export type ContactStatus =
   | "por_contactar"
   | "contactado"
-  | "touch_point_2"
-  | "touch_point_3"
-  | "touch_point_4"
-  | "touch_point_5"
-  | "touch_point_6"
-  | "caliente"
-  | "reunion_agendada"
+  | "follow_up_1"
+  | "follow_up_2"
+  | "en_conversacion"
+  | "agendado"
   | "reagendar"
   | "unqualified"
   | "no_interesado"
-  | "en_nutricion";
+  | "no_answer";
 
 export const CONTACT_STATUS_LABELS: Record<ContactStatus, string> = {
   por_contactar: "Por contactar",
   contactado: "Contactado",
-  touch_point_2: "Touch point 2",
-  touch_point_3: "Touch point 3",
-  touch_point_4: "Touch point 4",
-  touch_point_5: "Touch point 5",
-  touch_point_6: "Touch point 6",
-  caliente: "Caliente",
-  reunion_agendada: "Reunión agendada",
+  follow_up_1: "Follow Up 1",
+  follow_up_2: "Follow Up 2",
+  en_conversacion: "En conversación",
+  agendado: "Agendado",
   reagendar: "Reagendar",
   unqualified: "Unqualified",
   no_interesado: "No interesado",
-  en_nutricion: "En nutrición",
+  no_answer: "No Answer",
 };
 
+/** Same order as the previous company kanban (minus unqualified_post_meeting). */
 export const CONTACT_KANBAN_COLUMNS: ContactStatus[] = [
   "por_contactar",
   "contactado",
-  "touch_point_2",
-  "touch_point_3",
-  "touch_point_4",
-  "touch_point_5",
-  "touch_point_6",
-  "caliente",
-  "reunion_agendada",
+  "follow_up_1",
+  "follow_up_2",
+  "en_conversacion",
+  "agendado",
   "reagendar",
   "unqualified",
   "no_interesado",
-  "en_nutricion",
+  "no_answer",
 ];
 
-/** Stages the SDR may set explicitly (not via generic touch). */
+/** Stages set by drag / dialogs — not by a generic touch. */
 export const CONTACT_EXPLICIT_STATUSES: ContactStatus[] = [
-  "caliente",
-  "reunion_agendada",
+  "agendado",
   "reagendar",
   "unqualified",
   "no_interesado",
-  "en_nutricion",
+  "no_answer",
 ];
 
-/** Map legacy / raw contact status into a kanban column key. */
+/** Heal accidental spec keys into the current Sales board columns. */
 export function normalizeContactStatus(status: string | null | undefined): ContactStatus {
   const s = (status ?? "").trim() || "por_contactar";
   switch (s) {
-    case "follow_up_1":
-      return "touch_point_2";
-    case "follow_up_2":
-      return "touch_point_3";
-    case "en_conversacion":
-      return "touch_point_4";
-    case "agendado":
-      return "reunion_agendada";
-    case "no_answer":
-      return "en_nutricion";
+    case "touch_point_2":
+      return "follow_up_1";
+    case "touch_point_3":
+      return "follow_up_2";
+    case "touch_point_4":
+    case "touch_point_5":
+    case "touch_point_6":
+    case "caliente":
+      return "en_conversacion";
+    case "reunion_agendada":
+      return "agendado";
+    case "en_nutricion":
+      return "no_answer";
     case "unqualified_post_meeting":
       return "unqualified";
     default:

@@ -64,7 +64,7 @@ export function StatusSelect({ status, unqualifiedReason, onChange, onScheduleRe
       : status === "en_nutricion"
         ? "no_answer"
         : status.startsWith("touch_point") || status === "caliente"
-          ? "contactado"
+          ? "en_conversacion"
           : "por_contactar";
 
   const triggerCls = `${STATUS_STYLES[status] ?? STATUS_STYLES[selectValue]} border font-semibold ${

@@ -126,7 +126,7 @@ export function ContactKanbanBoard({ companies, onOpenDetail }: Props) {
     const current = normalizeContactStatus(item.contact.status);
     if (current === target) return;
 
-    if (target === "reunion_agendada") {
+    if (target === "agendado") {
       setScheduleFor(item);
       return;
     }
@@ -216,7 +216,8 @@ export function ContactKanbanBoard({ companies, onOpenDetail }: Props) {
       </div>
 
       <p className="text-[11px] text-muted-foreground px-0.5">
-        Outreach: registra un <span className="font-medium text-foreground">Touch</span>. Arrastra solo a Caliente / Reunión / salidas.
+        Mismas columnas de siempre · card = contacto. Outreach: <span className="font-medium text-foreground">Touch</span>.
+        Arrastra a Agendado / Reagendar / Unqualified / No interesado / No Answer.
       </p>
 
       <div className="flex gap-2 overflow-x-auto pb-3">
@@ -268,11 +269,11 @@ export function ContactKanbanBoard({ companies, onOpenDetail }: Props) {
         onConfirm={async (payload) => {
           if (!scheduleFor?.contact.id) return;
           if (payload.alreadyHappened) {
-            await setContactStatus(scheduleFor.contact.id, "reunion_agendada");
-            toast.success(`${scheduleFor.contact.name} → Reunión agendada`);
+            await setContactStatus(scheduleFor.contact.id, "agendado");
+            toast.success(`${scheduleFor.contact.name} → Agendado`);
           } else {
             await scheduleMeeting(scheduleFor.company.id, payload);
-            await setContactStatus(scheduleFor.contact.id, "reunion_agendada");
+            await setContactStatus(scheduleFor.contact.id, "agendado");
             toast.success(`Reunión agendada con ${payload.accountExecutive}`);
           }
           setScheduleFor(null);
