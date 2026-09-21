@@ -28,9 +28,9 @@ BEGIN
     RAISE EXCEPTION 'test1 failed: %', v_r;
   END IF;
 
-  -- contactado + touch → touch_point_2
+  -- contactado + touch → follow_up_1 (current Sales ladder)
   v_r := public.apply_touch_to_contact(v_contact_id, 'linkedin', 'nico', 'Test', 'smoke 2');
-  IF (v_r->>'to_status') IS DISTINCT FROM 'touch_point_2' THEN
+  IF (v_r->>'to_status') IS DISTINCT FROM 'follow_up_1' THEN
     RAISE EXCEPTION 'test2 failed: %', v_r;
   END IF;
 
