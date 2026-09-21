@@ -311,8 +311,8 @@ CREATE TRIGGER audit_meetings_changes
 -- Gate for kanban cutover: COUNT status IS NULL = 0.
 -- Not a gate for apply_touch (COALESCE handles NULL).
 --
--- Disable audit triggers for the backfill window so a one-shot / multi-batch
--- UPDATE does not flood audit_log / WAL / Realtime. Re-enable immediately after.
+-- Disable audit triggers for the backfill window so updates do not flood
+-- audit_log / WAL / Realtime. Re-enable immediately after.
 
 ALTER TABLE public.companies DISABLE TRIGGER audit_companies_changes;
 ALTER TABLE public.contacts DISABLE TRIGGER audit_contacts_changes;
@@ -330,7 +330,8 @@ SET status_entered_at = COALESCE(
 )
 WHERE c.status_entered_at IS NULL;
 
--- Contacts in batches of 500 to keep locks short (even without audit).
+-- Contacts in batches of 500. Join companies via target.company_id
+-- (must not reference UPDATE alias "ct" inside FROM-clause JOINs).
 DO $$
 DECLARE
   batch_size int := 500;
@@ -338,7 +339,7 @@ DECLARE
 BEGIN
   LOOP
     WITH target AS (
-      SELECT ct.id AS contact_id
+      SELECT ct.id AS contact_id, ct.company_id
       FROM public.contacts ct
       WHERE ct.status IS NULL
       ORDER BY ct.id
@@ -350,7 +351,7 @@ BEGIN
       status_entered_at = COALESCE(c.status_entered_at, c.created_at, now()),
       sdr = COALESCE(ct.sdr, c.sdr)
     FROM target t
-    LEFT JOIN public.companies c ON c.id = ct.company_id
+    JOIN public.companies c ON c.id = t.company_id
     WHERE ct.id = t.contact_id;
 
     GET DIAGNOSTICS updated = ROW_COUNT;
