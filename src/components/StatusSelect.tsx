@@ -17,6 +17,14 @@ const STATUS_STYLES: Record<CompanyStatus, string> = {
   no_interesado: "bg-score-low/10 text-score-low border-score-low/25",
   unqualified: "bg-score-low/15 text-score-low border-score-low/30",
   unqualified_post_meeting: "bg-score-low/15 text-score-low border-score-low/30",
+  touch_point_2: "bg-primary/10 text-primary border-primary/25",
+  touch_point_3: "bg-primary/15 text-primary border-primary/30",
+  touch_point_4: "bg-primary/20 text-primary border-primary/35",
+  touch_point_5: "bg-primary/25 text-primary border-primary/40",
+  touch_point_6: "bg-primary/30 text-primary border-primary/45",
+  caliente: "bg-score-medium/20 text-score-medium border-score-medium/40",
+  reunion_agendada: "bg-score-high/15 text-score-high border-score-high/30",
+  en_nutricion: "bg-muted text-muted-foreground border-border",
 };
 
 interface Props {
@@ -49,19 +57,29 @@ export function StatusSelect({ status, unqualifiedReason, onChange, onScheduleRe
     setPendingUnqualified(false);
   };
 
-  const triggerCls = `${STATUS_STYLES[status]} border font-semibold ${
+  const selectValue: CompanyStatus = (STATUS_OPTIONS as string[]).includes(status)
+    ? status
+    : status === "reunion_agendada"
+      ? "agendado"
+      : status === "en_nutricion"
+        ? "no_answer"
+        : status.startsWith("touch_point") || status === "caliente"
+          ? "contactado"
+          : "por_contactar";
+
+  const triggerCls = `${STATUS_STYLES[status] ?? STATUS_STYLES[selectValue]} border font-semibold ${
     size === "sm" ? "h-7 px-2 text-xs" : "h-9 px-3 text-sm"
   } rounded-md w-auto min-w-fit whitespace-nowrap [&>span]:line-clamp-none`;
 
   return (
     <>
-      <Select value={status} onValueChange={handleSelect}>
+      <Select value={selectValue} onValueChange={handleSelect}>
         <SelectTrigger
           className={triggerCls}
           title={status === "unqualified" && unqualifiedReason ? unqualifiedReason : undefined}
           onClick={(e) => e.stopPropagation()}
         >
-          <SelectValue>{STATUS_LABELS[status]}</SelectValue>
+          <SelectValue>{STATUS_LABELS[status] ?? STATUS_LABELS[selectValue]}</SelectValue>
         </SelectTrigger>
         <SelectContent onClick={(e) => e.stopPropagation()}>
           {STATUS_OPTIONS.map((s) => (

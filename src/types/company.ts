@@ -30,7 +30,95 @@ export type CompanyStatus =
   | "no_answer"
   | "no_interesado"
   | "unqualified"
-  | "unqualified_post_meeting";
+  | "unqualified_post_meeting"
+  | "touch_point_2"
+  | "touch_point_3"
+  | "touch_point_4"
+  | "touch_point_5"
+  | "touch_point_6"
+  | "caliente"
+  | "reunion_agendada"
+  | "en_nutricion";
+
+/** Spec SDR ladder used by the contact kanban (Phase B cutover). */
+export type ContactStatus =
+  | "por_contactar"
+  | "contactado"
+  | "touch_point_2"
+  | "touch_point_3"
+  | "touch_point_4"
+  | "touch_point_5"
+  | "touch_point_6"
+  | "caliente"
+  | "reunion_agendada"
+  | "reagendar"
+  | "unqualified"
+  | "no_interesado"
+  | "en_nutricion";
+
+export const CONTACT_STATUS_LABELS: Record<ContactStatus, string> = {
+  por_contactar: "Por contactar",
+  contactado: "Contactado",
+  touch_point_2: "Touch point 2",
+  touch_point_3: "Touch point 3",
+  touch_point_4: "Touch point 4",
+  touch_point_5: "Touch point 5",
+  touch_point_6: "Touch point 6",
+  caliente: "Caliente",
+  reunion_agendada: "Reunión agendada",
+  reagendar: "Reagendar",
+  unqualified: "Unqualified",
+  no_interesado: "No interesado",
+  en_nutricion: "En nutrición",
+};
+
+export const CONTACT_KANBAN_COLUMNS: ContactStatus[] = [
+  "por_contactar",
+  "contactado",
+  "touch_point_2",
+  "touch_point_3",
+  "touch_point_4",
+  "touch_point_5",
+  "touch_point_6",
+  "caliente",
+  "reunion_agendada",
+  "reagendar",
+  "unqualified",
+  "no_interesado",
+  "en_nutricion",
+];
+
+/** Stages the SDR may set explicitly (not via generic touch). */
+export const CONTACT_EXPLICIT_STATUSES: ContactStatus[] = [
+  "caliente",
+  "reunion_agendada",
+  "reagendar",
+  "unqualified",
+  "no_interesado",
+  "en_nutricion",
+];
+
+/** Map legacy / raw contact status into a kanban column key. */
+export function normalizeContactStatus(status: string | null | undefined): ContactStatus {
+  const s = (status ?? "").trim() || "por_contactar";
+  switch (s) {
+    case "follow_up_1":
+      return "touch_point_2";
+    case "follow_up_2":
+      return "touch_point_3";
+    case "en_conversacion":
+      return "touch_point_4";
+    case "agendado":
+      return "reunion_agendada";
+    case "no_answer":
+      return "en_nutricion";
+    case "unqualified_post_meeting":
+      return "unqualified";
+    default:
+      if ((CONTACT_KANBAN_COLUMNS as string[]).includes(s)) return s as ContactStatus;
+      return "por_contactar";
+  }
+}
 
 export const STATUS_LABELS: Record<CompanyStatus, string> = {
   por_contactar: "Por contactar",
@@ -44,6 +132,14 @@ export const STATUS_LABELS: Record<CompanyStatus, string> = {
   no_interesado: "No interesado",
   unqualified: "Unqualified",
   unqualified_post_meeting: "Unqualified Post-Reunión",
+  touch_point_2: "Touch point 2",
+  touch_point_3: "Touch point 3",
+  touch_point_4: "Touch point 4",
+  touch_point_5: "Touch point 5",
+  touch_point_6: "Touch point 6",
+  caliente: "Caliente",
+  reunion_agendada: "Reunión agendada",
+  en_nutricion: "En nutrición",
 };
 
 export const STATUS_OPTIONS: CompanyStatus[] = [

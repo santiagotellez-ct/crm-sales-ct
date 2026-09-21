@@ -31,6 +31,8 @@ interface Props {
     to_status?: string;
     advanced?: boolean;
   } | null | undefined>;
+  /** Highlight this contact when opened from the kanban. */
+  focusContactId?: string | null;
   compact?: boolean;
 }
 
@@ -49,6 +51,7 @@ export function ContactsPanel({
   onUpdate,
   onOpenExisting,
   onApplyTouch,
+  focusContactId,
   compact = false,
 }: Props) {
   const [linkedinUrl, setLinkedinUrl] = useState("");
@@ -303,7 +306,10 @@ export function ContactsPanel({
             );
           }
           return (
-          <div key={c.id ?? c.linkedin} className="bg-muted/50 rounded-lg p-3 space-y-2">
+          <div key={c.id ?? c.linkedin} className={cn(
+            "bg-muted/50 rounded-lg p-3 space-y-2",
+            focusContactId && c.id === focusContactId && "ring-2 ring-primary/50 border border-primary/40",
+          )}>
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium text-foreground truncate">{c.name || "(sin nombre)"}</p>

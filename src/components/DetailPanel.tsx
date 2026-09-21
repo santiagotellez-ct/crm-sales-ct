@@ -28,6 +28,8 @@ interface DetailPanelProps {
   onDelete?: () => void;
   /** Switch the open detail panel to another company (duplicate contact gate). */
   onOpenCompany?: (company: Company) => void;
+  /** Contact opened from the contact kanban — scroll/highlight in the list. */
+  focusContactId?: string | null;
 }
 
 
@@ -35,6 +37,7 @@ interface DetailPanelProps {
 export function DetailPanel({
   company, onClose, onUpdateNotes,
   onStatusChange, onFitChange, onAddContact, onRemoveContact, onDelete, onOpenCompany,
+  focusContactId,
 }: DetailPanelProps) {
 
 
@@ -254,6 +257,7 @@ export function DetailPanel({
             contacts={company.contacts}
             allCompanies={allCompanies}
             defaultSdr={company.sdr}
+            focusContactId={focusContactId}
             onAdd={onAddContact}
             onRemove={onRemoveContact}
             onUpdate={updateContact}

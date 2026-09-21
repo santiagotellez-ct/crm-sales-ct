@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { STATUS_OPTIONS, STATUS_LABELS, CompanyStatus } from "@/types/company";
+import { STATUS_OPTIONS, STATUS_LABELS, CompanyStatus, CONTACT_KANBAN_COLUMNS, CONTACT_STATUS_LABELS, ContactStatus } from "@/types/company";
 
 export type PipelineKind = "sdr" | "ae";
 
@@ -19,16 +19,16 @@ export interface PipelineStage {
 
 /** Fallback when pipeline_stages is empty or the query fails — never blank the kanban. */
 function fallbackSdrStages(): PipelineStage[] {
-  return STATUS_OPTIONS.map((key, i) => ({
+  return CONTACT_KANBAN_COLUMNS.map((key, i) => ({
     id: `fallback-${key}`,
     pipeline: "sdr" as const,
     key,
-    label: STATUS_LABELS[key],
+    label: CONTACT_STATUS_LABELS[key],
     kind: (["reagendar"].includes(key)
       ? "special"
-      : ["no_answer", "no_interesado", "unqualified", "unqualified_post_meeting"].includes(key)
-        ? "exit"
-        : "main") as PipelineStage["kind"],
+      : ["en_nutricion", "no_interesado", "unqualified"].includes(key)
+      ? "exit"
+      : "main") as PipelineStage["kind"],
     sort_order: i + 1,
     probability: 0,
     is_won: false,
@@ -38,9 +38,7 @@ function fallbackSdrStages(): PipelineStage[] {
 }
 
 /**
- * Dual-read: prefer DB catalog, fall back to STATUS_OPTIONS.
- * Kanban Board still uses hardcoded KANBAN_COLUMNS until cutover — this hook
- * is for future consumers and admin prep.
+ * Dual-read: prefer DB catalog, fall back to CONTACT_KANBAN_COLUMNS.
  */
 export function usePipelineStages(pipeline: PipelineKind, opts?: { activeOnly?: boolean }) {
   const activeOnly = opts?.activeOnly ?? true;
@@ -82,9 +80,19 @@ export function usePipelineStages(pipeline: PipelineKind, opts?: { activeOnly?: 
 /** Active SDR stage keys — safe for selects; never empty. */
 export function useSdrStatusOptions(): CompanyStatus[] {
   const { stages, source } = usePipelineStages("sdr", { activeOnly: true });
-  if (source === "fallback") return STATUS_OPTIONS;
-  const keys = stages.map((s) => s.key).filter((k): k is CompanyStatus =>
-    (STATUS_OPTIONS as string[]).includes(k),
-  );
-  return keys.length > 0 ? keys : STATUS_OPTIONS;
+  if (source === "fallback") {
+    return CONTACT_KANBAN_COLUMNS as unknown as CompanyStatus[];
+  }
+  const keys = stages.map((s) => s.key) as CompanyStatus[];
+  return keys.length > 0 ? keys : (CONTACT_KANBAN_COLUMNS as unknown as CompanyStatus[]);
+}
+
+/** Contact kanban column keys from DB or fallback. */
+export function useContactKanbanColumns(): ContactStatus[] {
+  const { stages, source } = usePipelineStages("sdr", { activeOnly: true });
+  if (source === "fallback") return [...CONTACT_KANBAN_COLUMNS];
+  const keys = stages
+    .map((s) => s.key)
+    .filter((k): k is ContactStatus => (CONTACT_KANBAN_COLUMNS as string[]).includes(k));
+  return keys.length > 0 ? keys : [...CONTACT_KANBAN_COLUMNS];
 }

@@ -1131,6 +1131,18 @@ export type Database = {
         }
         Returns: Json
       }
+      set_contact_status: {
+        Args: {
+          p_contact_id: string
+          p_status: string
+          p_reason?: string | null
+        }
+        Returns: Json
+      }
+      refresh_company_status_from_contacts: {
+        Args: { p_company_id: string }
+        Returns: string
+      }
       get_deals_for_followup: { Args: never; Returns: Json }
       get_deals_tp01: {
         Args: never

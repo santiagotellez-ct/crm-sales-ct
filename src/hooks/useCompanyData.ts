@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect, useRef, createContext, useContext, ReactNode, createElement } from "react";
-import { Company, IcpFit, TimePeriod, CompanyStatus, Contact, ContactedFrom, Sdr, Activity, Task, FIT_RANK, CompanySize, ProspectionSequence } from "@/types/company";
+import { Company, IcpFit, TimePeriod, CompanyStatus, Contact, ContactedFrom, ContactStatus, Sdr, Activity, Task, FIT_RANK, CompanySize, ProspectionSequence } from "@/types/company";
 import { supabase } from "@/integrations/supabase/client";
 import { mergeCompanyData, findDuplicateClusters } from "@/lib/duplicates";
 import { Meeting, MeetingGoal, AccountExecutive } from "@/types/meeting";
@@ -691,29 +691,84 @@ function useCompanyDataInternal() {
     const result = data as {
       touch_id?: string;
       contact_id?: string;
+      company_id?: string;
       from_status?: string;
       to_status?: string;
       advanced?: boolean;
+      company_status?: string;
     } | null;
 
     if (result?.contact_id && result.to_status) {
-      setCompanies((prev) => prev.map((c) => ({
-        ...c,
-        contacts: c.contacts.map((k) =>
-          k.id === result.contact_id
-            ? {
-                ...k,
-                status: result.to_status ?? k.status,
-                status_entered_at: result.advanced ? new Date().toISOString() : k.status_entered_at,
-                sdr: (payload.sdr as Sdr | undefined) ?? k.sdr,
-              }
-            : k
-        ),
-      })));
+      setCompanies((prev) => prev.map((c) => {
+        const nextCompany =
+          result.company_id === c.id && result.company_status
+            ? { ...c, status: result.company_status as CompanyStatus }
+            : c;
+        return {
+          ...nextCompany,
+          contacts: nextCompany.contacts.map((k) =>
+            k.id === result.contact_id
+              ? {
+                  ...k,
+                  status: result.to_status ?? k.status,
+                  status_entered_at: result.advanced ? new Date().toISOString() : k.status_entered_at,
+                  sdr: (payload.sdr as Sdr | undefined) ?? k.sdr,
+                }
+              : k
+          ),
+        };
+      }));
     }
     return result;
   }, []);
 
+  const setContactStatus = useCallback(async (
+    contactId: string,
+    status: ContactStatus | string,
+    reason?: string,
+  ) => {
+    const { data, error } = await supabase.rpc("set_contact_status", {
+      p_contact_id: contactId,
+      p_status: status,
+      p_reason: reason ?? null,
+    });
+    if (error) {
+      console.error("set_contact_status failed", error.message);
+      throw error;
+    }
+    const result = data as {
+      contact_id?: string;
+      company_id?: string;
+      from_status?: string;
+      to_status?: string;
+      company_status?: string;
+    } | null;
+
+    if (result?.contact_id && result.to_status) {
+      setCompanies((prev) => prev.map((c) => {
+        const nextCompany =
+          result.company_id === c.id && result.company_status
+            ? { ...c, status: result.company_status as CompanyStatus }
+            : c;
+        return {
+          ...nextCompany,
+          contacts: nextCompany.contacts.map((k) =>
+            k.id === result.contact_id
+              ? {
+                  ...k,
+                  status: result.to_status,
+                  status_entered_at:
+                    result.to_status !== result.from_status
+                      ? new Date().toISOString()
+                      : k.status_entered_at,
+                }
+              : k
+          ),
+        };
+      }));
+    }
+    return result;
+  }, []);
   const removeContact = useCallback(async (companyId: string, linkedin: string) => {
     // Look up the contact name before removing it so we can also remove the
     // matching "contact_added" activities (otherwise the dashboard keeps
@@ -1066,6 +1121,7 @@ function useCompanyDataInternal() {
     setAmigos,
     addContact,
     applyTouch,
+    setContactStatus,
     removeContact,
     markAsReviewed,
     deleteCompanies,
