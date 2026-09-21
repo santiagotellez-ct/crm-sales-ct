@@ -39,7 +39,7 @@ export function DetailPanel({
 
 
   const [notes, setNotes] = useState(company.notes);
-  const { allCompanies, tasks, addTask, toggleTask, deleteTask, updateCompany, scheduleMeeting, updateContact, sequences, reassignCompany, setSdr, activities } = useCompanyData();
+  const { allCompanies, tasks, addTask, toggleTask, deleteTask, updateCompany, scheduleMeeting, updateContact, applyTouch, sequences, reassignCompany, setSdr, activities } = useCompanyData();
   const companyTasks = tasks.filter((t) => t.company_id === company.id);
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [reassignOpen, setReassignOpen] = useState(false);
@@ -253,9 +253,11 @@ export function DetailPanel({
             companyId={company.id}
             contacts={company.contacts}
             allCompanies={allCompanies}
+            defaultSdr={company.sdr}
             onAdd={onAddContact}
             onRemove={onRemoveContact}
             onUpdate={updateContact}
+            onApplyTouch={applyTouch}
             onOpenExisting={(c) => {
               if (c.id === company.id) return;
               onOpenCompany?.(c);

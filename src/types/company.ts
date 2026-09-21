@@ -87,12 +87,17 @@ export const SOURCE_LABELS: Record<CompanySource, string> = {
 };
 
 export interface Contact {
+  id?: string;
   name: string;
   role: string;
   email?: string;
   phone?: string;
   linkedin: string;
   contacted_from?: ContactedFrom[];
+  /** Contact-level SDR stage (spec ladder). Independent of companies.status until cutover. */
+  status?: string | null;
+  status_entered_at?: string | null;
+  sdr?: Sdr | null;
 }
 
 export interface Company {

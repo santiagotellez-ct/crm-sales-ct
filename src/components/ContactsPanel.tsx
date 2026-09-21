@@ -1,22 +1,28 @@
 import { useState } from "react";
-import { Company, Contact, ContactedFrom, CONTACTED_FROM_OPTIONS } from "@/types/company";
+import { Company, Contact, ContactedFrom, CONTACTED_FROM_OPTIONS, Sdr } from "@/types/company";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Linkedin, Loader2, Sparkles, Trash2, Plus, Mail, Phone, Pencil, Check, X, AlertTriangle } from "lucide-react";
+import { Linkedin, Loader2, Sparkles, Trash2, Plus, Mail, Phone, Pencil, Check, X, AlertTriangle, Hand } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { findContactCreationGate } from "@/lib/duplicates";
 import { cn } from "@/lib/utils";
+import { LogTouchDialog, TOUCH_STAGE_LABELS } from "@/components/LogTouchDialog";
 
 interface Props {
   companyId: string;
   contacts: Contact[];
   /** Full CRM company list for cross-company email/LinkedIn hard block. */
   allCompanies?: Company[];
+  defaultSdr?: Sdr | null;
   onAdd: (companyId: string, contact: Contact) => void | Promise<void>;
   onRemove: (companyId: string, linkedin: string) => void;
   onUpdate?: (companyId: string, oldLinkedin: string, updates: Partial<Contact>) => void;
   onOpenExisting?: (company: Company) => void;
+  onApplyTouch?: (
+    contactId: string,
+    payload: { channel?: string; account_used?: string; sdr?: string; note?: string },
+  ) => Promise<{ from_status?: string; to_status?: string; advanced?: boolean } | null | undefined>;
   compact?: boolean;
 }
 
@@ -24,10 +30,12 @@ export function ContactsPanel({
   companyId,
   contacts,
   allCompanies = [],
+  defaultSdr,
   onAdd,
   onRemove,
   onUpdate,
   onOpenExisting,
+  onApplyTouch,
   compact = false,
 }: Props) {
   const [linkedinUrl, setLinkedinUrl] = useState("");
@@ -40,6 +48,7 @@ export function ContactsPanel({
   const [showForm, setShowForm] = useState(false);
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState<Contact | null>(null);
+  const [touchFor, setTouchFor] = useState<Contact | null>(null);
   const [hardBlock, setHardBlock] = useState<{
     contact: Contact;
     company: Company;
@@ -237,10 +246,15 @@ export function ContactsPanel({
             );
           }
           return (
-          <div key={c.linkedin} className="bg-muted/50 rounded-lg p-3 flex items-start justify-between gap-2">
+          <div key={c.id ?? c.linkedin} className="bg-muted/50 rounded-lg p-3 flex items-start justify-between gap-2">
             <div className="min-w-0 flex-1">
               <p className="text-sm font-medium text-foreground truncate">{c.name || "(sin nombre)"}</p>
               {c.role && <p className="text-xs text-muted-foreground truncate">{c.role}</p>}
+              {c.status && (
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  Etapa: {TOUCH_STAGE_LABELS[c.status] ?? c.status}
+                </p>
+              )}
               {c.contacted_from && c.contacted_from.length > 0 && (
                 <div className="flex flex-wrap gap-1 mt-1">
                   {c.contacted_from.map((cf) => (
@@ -267,6 +281,17 @@ export function ContactsPanel({
               </div>
             </div>
             <div className="flex items-center gap-0.5">
+              {onApplyTouch && (
+                <button
+                  onClick={() => setTouchFor(c)}
+                  className="p-1 rounded hover:bg-background/60 text-muted-foreground hover:text-primary transition-colors"
+                  aria-label="Registrar touch"
+                  title="Registrar touch"
+                  disabled={!c.id}
+                >
+                  <Hand className="h-3.5 w-3.5" />
+                </button>
+              )}
               {onUpdate && (
                 <button
                   onClick={() => { setEditingKey(c.linkedin); setEditDraft({ ...c }); }}
@@ -288,6 +313,19 @@ export function ContactsPanel({
           );
         })}
       </div>
+
+      {onApplyTouch && (
+        <LogTouchDialog
+          open={!!touchFor}
+          contact={touchFor}
+          defaultSdr={defaultSdr}
+          onOpenChange={(o) => { if (!o) setTouchFor(null); }}
+          onSubmit={async (payload) => {
+            if (!touchFor?.id) return null;
+            return onApplyTouch(touchFor.id, payload);
+          }}
+        />
+      )}
 
       {!showForm ? (
         <Button size="sm" variant="outline" onClick={() => setShowForm(true)} className="w-full">

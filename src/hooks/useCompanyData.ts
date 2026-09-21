@@ -30,7 +30,34 @@ type CompanyRow = {
   experiencia_target: string | null;
   source: string | null;
 };
-type ContactRow = { id: string; company_id: string; name: string; role: string; email: string | null; phone: string | null; linkedin: string; contacted_from: string[] | string | null };
+type ContactRow = {
+  id: string;
+  company_id: string;
+  name: string;
+  role: string;
+  email: string | null;
+  phone: string | null;
+  linkedin: string;
+  contacted_from: string[] | string | null;
+  status?: string | null;
+  status_entered_at?: string | null;
+  sdr?: string | null;
+};
+
+function mapContact(k: ContactRow): Contact {
+  return {
+    id: k.id,
+    name: k.name,
+    role: k.role,
+    email: k.email ?? undefined,
+    phone: k.phone ?? undefined,
+    linkedin: k.linkedin,
+    contacted_from: normalizeContactedFrom(k.contacted_from),
+    status: k.status ?? null,
+    status_entered_at: k.status_entered_at ?? null,
+    sdr: (k.sdr as Sdr | null) ?? null,
+  };
+}
 
 function normalizeContactedFrom(v: unknown): ContactedFrom[] {
   if (Array.isArray(v)) return v.filter(Boolean) as ContactedFrom[];
@@ -227,7 +254,7 @@ function useCompanyDataInternal() {
       const contactsByCompany = new Map<string, Contact[]>();
       kRows.forEach((k: ContactRow) => {
         const list = contactsByCompany.get(k.company_id) ?? [];
-        list.push({ name: k.name, role: k.role, email: k.email ?? undefined, phone: k.phone ?? undefined, linkedin: k.linkedin, contacted_from: normalizeContactedFrom(k.contacted_from) });
+        list.push(mapContact(k));
         contactsByCompany.set(k.company_id, list);
       });
       setCompanies(cRows.map((r: CompanyRow) => mapCompany(r, contactsByCompany.get(r.id) ?? [])));
@@ -259,13 +286,27 @@ function useCompanyDataInternal() {
       .on("postgres_changes", { event: "*", schema: "public", table: "contacts" }, (payload) => {
         if (payload.eventType === "INSERT") {
           const k = payload.new as ContactRow;
-          setCompanies((prev) => prev.map((c) => c.id === k.company_id && !c.contacts.some((x) => x.linkedin === k.linkedin)
-            ? { ...c, contacts: [...c.contacts, { name: k.name, role: k.role, email: k.email ?? undefined, phone: k.phone ?? undefined, linkedin: k.linkedin, contacted_from: normalizeContactedFrom(k.contacted_from) }] }
+          const mapped = mapContact(k);
+          setCompanies((prev) => prev.map((c) => {
+            if (c.id !== k.company_id) return c;
+            if (c.contacts.some((x) => x.id === mapped.id || x.linkedin === mapped.linkedin)) return c;
+            return { ...c, contacts: [...c.contacts, mapped] };
+          }));
+        } else if (payload.eventType === "UPDATE") {
+          const k = payload.new as ContactRow;
+          const mapped = mapContact(k);
+          setCompanies((prev) => prev.map((c) => c.id === k.company_id
+            ? {
+                ...c,
+                contacts: c.contacts.map((x) =>
+                  (x.id && x.id === mapped.id) || x.linkedin === mapped.linkedin ? { ...x, ...mapped } : x
+                ),
+              }
             : c));
         } else if (payload.eventType === "DELETE") {
           const k = payload.old as ContactRow;
           setCompanies((prev) => prev.map((c) => c.id === k.company_id
-            ? { ...c, contacts: c.contacts.filter((x) => x.linkedin !== k.linkedin) }
+            ? { ...c, contacts: c.contacts.filter((x) => x.id !== k.id && x.linkedin !== k.linkedin) }
             : c));
         }
       })
@@ -582,7 +623,6 @@ function useCompanyDataInternal() {
   }, []);
 
   const addContact = useCallback(async (companyId: string, contact: Contact) => {
-    setCompanies((prev) => prev.map((c) => c.id === companyId ? { ...c, contacts: [...c.contacts, contact] } : c));
     const target = companies.find((c) => c.id === companyId);
     if (contact.linkedin) {
       try {
@@ -602,7 +642,7 @@ function useCompanyDataInternal() {
         console.warn("Webhook aimfox-contact failed", e);
       }
     }
-    await supabase.from("contacts").insert({
+    const { data: inserted, error: insertError } = await supabase.from("contacts").insert({
       company_id: companyId,
       name: contact.name,
       role: contact.role,
@@ -610,11 +650,69 @@ function useCompanyDataInternal() {
       phone: contact.phone ?? null,
       linkedin: contact.linkedin,
       contacted_from: (contact.contacted_from && contact.contacted_from.length ? contact.contacted_from : null) as never,
-    });
+    }).select("*").single();
+    if (insertError) {
+      console.error("addContact failed", insertError.message);
+      throw insertError;
+    }
+    const mapped = inserted ? mapContact(inserted as ContactRow) : contact;
+    setCompanies((prev) => prev.map((c) => {
+      if (c.id !== companyId) return c;
+      if (c.contacts.some((x) => (mapped.id && x.id === mapped.id) || x.linkedin === mapped.linkedin)) {
+        return {
+          ...c,
+          contacts: c.contacts.map((x) =>
+            (mapped.id && x.id === mapped.id) || x.linkedin === mapped.linkedin ? { ...x, ...mapped } : x
+          ),
+        };
+      }
+      return { ...c, contacts: [...c.contacts, mapped] };
+    }));
     if (target) {
       await logActivity({ type: "contact_added", company_id: companyId, company_name: target.company_name, sdr: target.sdr ?? null, contact_name: contact.name });
     }
   }, [companies, logActivity]);
+
+  const applyTouch = useCallback(async (
+    contactId: string,
+    payload: { channel?: string; account_used?: string; sdr?: string; note?: string },
+  ) => {
+    const { data, error } = await supabase.rpc("apply_touch_to_contact", {
+      p_contact_id: contactId,
+      p_channel: payload.channel ?? null,
+      p_account_used: payload.account_used ?? null,
+      p_sdr: payload.sdr ?? null,
+      p_note: payload.note ?? null,
+    });
+    if (error) {
+      console.error("apply_touch_to_contact failed", error.message);
+      throw error;
+    }
+    const result = data as {
+      touch_id?: string;
+      contact_id?: string;
+      from_status?: string;
+      to_status?: string;
+      advanced?: boolean;
+    } | null;
+
+    if (result?.contact_id && result.to_status) {
+      setCompanies((prev) => prev.map((c) => ({
+        ...c,
+        contacts: c.contacts.map((k) =>
+          k.id === result.contact_id
+            ? {
+                ...k,
+                status: result.to_status ?? k.status,
+                status_entered_at: result.advanced ? new Date().toISOString() : k.status_entered_at,
+                sdr: (payload.sdr as Sdr | undefined) ?? k.sdr,
+              }
+            : k
+        ),
+      })));
+    }
+    return result;
+  }, []);
 
   const removeContact = useCallback(async (companyId: string, linkedin: string) => {
     // Look up the contact name before removing it so we can also remove the
@@ -967,6 +1065,7 @@ function useCompanyDataInternal() {
     setFit,
     setAmigos,
     addContact,
+    applyTouch,
     removeContact,
     markAsReviewed,
     deleteCompanies,

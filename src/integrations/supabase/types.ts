@@ -1120,6 +1120,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      apply_touch_to_contact: {
+        Args: {
+          p_contact_id: string
+          p_channel?: string | null
+          p_account_used?: string | null
+          p_sdr?: string | null
+          p_note?: string | null
+          p_touched_at?: string | null
+        }
+        Returns: Json
+      }
       get_deals_for_followup: { Args: never; Returns: Json }
       get_deals_tp01: {
         Args: never
