@@ -26,18 +26,20 @@ interface DetailPanelProps {
   onAddContact: (companyId: string, contact: Contact) => void | Promise<void>;
   onRemoveContact: (companyId: string, linkedin: string) => void;
   onDelete?: () => void;
+  /** Switch the open detail panel to another company (duplicate contact gate). */
+  onOpenCompany?: (company: Company) => void;
 }
 
 
 
 export function DetailPanel({
   company, onClose, onUpdateNotes,
-  onStatusChange, onFitChange, onAddContact, onRemoveContact, onDelete,
+  onStatusChange, onFitChange, onAddContact, onRemoveContact, onDelete, onOpenCompany,
 }: DetailPanelProps) {
 
 
   const [notes, setNotes] = useState(company.notes);
-  const { tasks, addTask, toggleTask, deleteTask, updateCompany, scheduleMeeting, updateContact, sequences, reassignCompany, setSdr, activities } = useCompanyData();
+  const { allCompanies, tasks, addTask, toggleTask, deleteTask, updateCompany, scheduleMeeting, updateContact, sequences, reassignCompany, setSdr, activities } = useCompanyData();
   const companyTasks = tasks.filter((t) => t.company_id === company.id);
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [reassignOpen, setReassignOpen] = useState(false);
@@ -250,9 +252,14 @@ export function DetailPanel({
           <ContactsPanel
             companyId={company.id}
             contacts={company.contacts}
+            allCompanies={allCompanies}
             onAdd={onAddContact}
             onRemove={onRemoveContact}
             onUpdate={updateContact}
+            onOpenExisting={(c) => {
+              if (c.id === company.id) return;
+              onOpenCompany?.(c);
+            }}
           />
         </div>
 

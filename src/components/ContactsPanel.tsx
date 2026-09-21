@@ -1,21 +1,35 @@
 import { useState } from "react";
-import { Contact, ContactedFrom, CONTACTED_FROM_OPTIONS } from "@/types/company";
+import { Company, Contact, ContactedFrom, CONTACTED_FROM_OPTIONS } from "@/types/company";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Linkedin, Loader2, Sparkles, Trash2, Plus, Mail, Phone, Pencil, Check, X } from "lucide-react";
+import { Linkedin, Loader2, Sparkles, Trash2, Plus, Mail, Phone, Pencil, Check, X, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { findContactCreationGate } from "@/lib/duplicates";
+import { cn } from "@/lib/utils";
 
 interface Props {
   companyId: string;
   contacts: Contact[];
+  /** Full CRM company list for cross-company email/LinkedIn hard block. */
+  allCompanies?: Company[];
   onAdd: (companyId: string, contact: Contact) => void | Promise<void>;
   onRemove: (companyId: string, linkedin: string) => void;
   onUpdate?: (companyId: string, oldLinkedin: string, updates: Partial<Contact>) => void;
+  onOpenExisting?: (company: Company) => void;
   compact?: boolean;
 }
 
-export function ContactsPanel({ companyId, contacts, onAdd, onRemove, onUpdate, compact = false }: Props) {
+export function ContactsPanel({
+  companyId,
+  contacts,
+  allCompanies = [],
+  onAdd,
+  onRemove,
+  onUpdate,
+  onOpenExisting,
+  compact = false,
+}: Props) {
   const [linkedinUrl, setLinkedinUrl] = useState("");
   const [name, setName] = useState("");
   const [role, setRole] = useState("");
@@ -26,9 +40,35 @@ export function ContactsPanel({ companyId, contacts, onAdd, onRemove, onUpdate, 
   const [showForm, setShowForm] = useState(false);
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState<Contact | null>(null);
+  const [hardBlock, setHardBlock] = useState<{
+    contact: Contact;
+    company: Company;
+    reason: "email" | "linkedin";
+  } | null>(null);
 
   const reset = () => {
     setLinkedinUrl(""); setName(""); setRole(""); setEmail(""); setPhone(""); setContactedFrom([]); setShowForm(false);
+    setHardBlock(null);
+  };
+
+  const runGate = (opts: { email?: string; linkedin?: string; ignoreLinkedin?: string; ignoreEmail?: string }) => {
+    try {
+      const gate = findContactCreationGate(
+        {
+          email: opts.email,
+          linkedin: opts.linkedin,
+          ignoreLinkedin: opts.ignoreLinkedin,
+          ignoreEmail: opts.ignoreEmail,
+        },
+        allCompanies,
+      );
+      setHardBlock(gate.hard);
+      return gate.hard;
+    } catch (e) {
+      console.error("contact duplicate gate failed", e);
+      setHardBlock(null);
+      return null;
+    }
   };
 
   const ContactedFromChips = ({ value, onChange }: { value: ContactedFrom[]; onChange: (v: ContactedFrom[]) => void }) => (
@@ -47,6 +87,42 @@ export function ContactsPanel({ companyId, contacts, onAdd, onRemove, onUpdate, 
           </button>
         );
       })}
+    </div>
+  );
+
+  const HardBlockBanner = ({
+    block,
+    onClearField,
+  }: {
+    block: NonNullable<typeof hardBlock>;
+    onClearField: () => void;
+  }) => (
+    <div className="text-xs space-y-1.5">
+      <p className="text-destructive flex items-start gap-1">
+        <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
+        Ya existe un contacto con ese {block.reason === "email" ? "email" : "LinkedIn"}:{" "}
+        <span className="font-medium">{block.contact.name}</span>
+        {" "}en {block.company.company_name}.
+      </p>
+      <div className="flex gap-2">
+        {onOpenExisting && (
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            className="h-7 text-xs"
+            onClick={() => {
+              onOpenExisting(block.company);
+              reset();
+            }}
+          >
+            Abrir empresa
+          </Button>
+        )}
+        <Button type="button" size="sm" variant="ghost" className="h-7 text-xs" onClick={onClearField}>
+          Cancelar
+        </Button>
+      </div>
     </div>
   );
 
@@ -82,6 +158,8 @@ export function ContactsPanel({ companyId, contacts, onAdd, onRemove, onUpdate, 
       toast.error("Email inválido");
       return;
     }
+    const hard = runGate({ email: trimmedEmail, linkedin: linkedinUrl });
+    if (hard) return;
     await onAdd(companyId, {
       name: name.trim(),
       role: role.trim(),
@@ -128,6 +206,18 @@ export function ContactsPanel({ companyId, contacts, onAdd, onRemove, onUpdate, 
                       toast.error("Email inválido");
                       return;
                     }
+                    const hard = runGate({
+                      email: trimmedEmail,
+                      linkedin: editDraft.linkedin,
+                      ignoreLinkedin: c.linkedin,
+                      ignoreEmail: c.email,
+                    });
+                    if (hard) {
+                      toast.error(
+                        `Ya existe un contacto con ese ${hard.reason === "email" ? "email" : "LinkedIn"}: ${hard.contact.name} en ${hard.company.company_name}.`,
+                      );
+                      return;
+                    }
                     onUpdate?.(companyId, c.linkedin, {
                       name: editDraft.name.trim(),
                       role: editDraft.role.trim(),
@@ -138,6 +228,7 @@ export function ContactsPanel({ companyId, contacts, onAdd, onRemove, onUpdate, 
                     });
                     toast.success("Contacto actualizado");
                     setEditingKey(null); setEditDraft(null);
+                    setHardBlock(null);
                   }}>
                     <Check className="h-3.5 w-3.5 mr-1" />Guardar
                   </Button>
@@ -209,21 +300,47 @@ export function ContactsPanel({ companyId, contacts, onAdd, onRemove, onUpdate, 
               placeholder="https://linkedin.com/in/..."
               value={linkedinUrl}
               onChange={(e) => setLinkedinUrl(e.target.value)}
-              className="text-sm"
+              onBlur={() => runGate({ email, linkedin: linkedinUrl })}
+              className={cn("text-sm", hardBlock?.reason === "linkedin" && "border-destructive ring-1 ring-destructive/30")}
             />
             <Button size="sm" onClick={scan} disabled={scanning || !linkedinUrl.trim()} variant="secondary">
               {scanning ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
               <span className="ml-1">Escanear</span>
             </Button>
           </div>
+          {hardBlock?.reason === "linkedin" && (
+            <HardBlockBanner
+              block={hardBlock}
+              onClearField={() => {
+                setLinkedinUrl("");
+                setHardBlock(null);
+              }}
+            />
+          )}
           <Input placeholder="Nombre" value={name} onChange={(e) => setName(e.target.value)} className="text-sm" />
           <Input placeholder="Cargo" value={role} onChange={(e) => setRole(e.target.value)} className="text-sm" />
-          <Input type="email" placeholder="Email (opcional)" value={email} onChange={(e) => setEmail(e.target.value)} className="text-sm" />
+          <Input
+            type="email"
+            placeholder="Email (opcional)"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            onBlur={() => runGate({ email, linkedin: linkedinUrl })}
+            className={cn("text-sm", hardBlock?.reason === "email" && "border-destructive ring-1 ring-destructive/30")}
+          />
+          {hardBlock?.reason === "email" && (
+            <HardBlockBanner
+              block={hardBlock}
+              onClearField={() => {
+                setEmail("");
+                setHardBlock(null);
+              }}
+            />
+          )}
           <Input type="tel" placeholder="Teléfono (opcional)" value={phone} onChange={(e) => setPhone(e.target.value)} className="text-sm" />
           <ContactedFromChips value={contactedFrom} onChange={setContactedFrom} />
           <div className="flex gap-2 justify-end">
             <Button size="sm" variant="ghost" onClick={reset}>Cancelar</Button>
-            <Button size="sm" onClick={save}>Guardar</Button>
+            <Button size="sm" onClick={save} disabled={!!hardBlock}>Guardar</Button>
           </div>
         </div>
       )}

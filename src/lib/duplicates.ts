@@ -1,4 +1,4 @@
-import { Company } from "@/types/company";
+import { Company, Contact } from "@/types/company";
 
 export function normalizeDomain(domain: string | undefined | null): string {
   if (!domain) return "";
@@ -9,6 +9,250 @@ export function normalizeDomain(domain: string | undefined | null): string {
     .replace(/^www\./, "")
     .replace(/\/.*$/, "")
     .replace(/\s+/g, "");
+}
+
+/** Domains that identify a person mailbox, not a company. */
+export const GENERIC_EMAIL_DOMAINS = new Set([
+  "gmail.com",
+  "googlemail.com",
+  "hotmail.com",
+  "outlook.com",
+  "live.com",
+  "msn.com",
+  "yahoo.com",
+  "yahoo.es",
+  "icloud.com",
+  "me.com",
+  "mac.com",
+  "protonmail.com",
+  "proton.me",
+  "aol.com",
+  "yopmail.com",
+  "mail.com",
+  "gmx.com",
+  "gmx.net",
+]);
+
+/**
+ * Extract a host from a URL, bare domain, or email (part after @).
+ * Returns "" when nothing recognizable is found.
+ */
+export function extractDomain(emailOrUrl: string | undefined | null): string {
+  if (!emailOrUrl) return "";
+  const raw = String(emailOrUrl).trim().toLowerCase();
+  if (!raw) return "";
+  if (raw.includes("@")) {
+    const host = raw.split("@").pop() ?? "";
+    return normalizeDomain(host);
+  }
+  return normalizeDomain(raw);
+}
+
+/**
+ * Registrable root domain: last 2 labels, or 3 when the SLD is a common
+ * public suffix under a 2-letter ccTLD (e.g. rappi.com.co).
+ * co.rappi.com → rappi.com
+ */
+export function registrableDomain(emailOrUrl: string | undefined | null): string {
+  const host = extractDomain(emailOrUrl);
+  if (!host) return "";
+  const parts = host.split(".").filter(Boolean);
+  if (parts.length <= 2) return host;
+  const tld = parts[parts.length - 1];
+  const sld = parts[parts.length - 2];
+  const PUBLIC_SLDS = new Set(["co", "com", "org", "gob", "gov", "net", "edu"]);
+  if (tld.length === 2 && PUBLIC_SLDS.has(sld) && parts.length >= 3) {
+    return parts.slice(-3).join(".");
+  }
+  return parts.slice(-2).join(".");
+}
+
+export function isGenericDomain(emailOrUrl: string | undefined | null): boolean {
+  const root = registrableDomain(emailOrUrl);
+  return !!root && GENERIC_EMAIL_DOMAINS.has(root);
+}
+
+/** Lowercase LinkedIn URL without query/hash and without trailing slash. */
+export function normalizeLinkedinUrl(url: string | undefined | null): string {
+  if (!url) return "";
+  let s = String(url).trim().toLowerCase();
+  if (!s) return "";
+  s = s.replace(/^https?:\/\//, "");
+  s = s.replace(/^www\./, "");
+  s = s.replace(/[?#].*$/, "");
+  s = s.replace(/\/+$/, "");
+  return s;
+}
+
+const LEGAL_SUFFIX_RE =
+  /\b(s\.?\s*a\.?\s*s\.?|s\.?\s*a\.?|sas|sa|inc\.?|llc\.?|ltd\.?|ltda\.?|corp\.?|co\.?|group|holdings?)\b/gi;
+
+/**
+ * Compact name for Levenshtein gate (PR 0). Distinct from nameTokens/STOPWORDS
+ * used by /duplicates — those strip "colombia/tech/week" and empty CTW names.
+ */
+export function compactName(name: string | undefined | null): string {
+  if (!name) return "";
+  return String(name)
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(LEGAL_SUFFIX_RE, "")
+    .replace(/[^a-z0-9]/g, "");
+}
+
+export function levenshtein(a: string, b: string): number {
+  if (a === b) return 0;
+  if (!a.length) return b.length;
+  if (!b.length) return a.length;
+  const rows = a.length + 1;
+  const cols = b.length + 1;
+  const prev = new Array<number>(cols);
+  const curr = new Array<number>(cols);
+  for (let j = 0; j < cols; j++) prev[j] = j;
+  for (let i = 1; i < rows; i++) {
+    curr[0] = i;
+    const ca = a.charCodeAt(i - 1);
+    for (let j = 1; j < cols; j++) {
+      const cost = ca === b.charCodeAt(j - 1) ? 0 : 1;
+      curr[j] = Math.min(prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + cost);
+    }
+    for (let j = 0; j < cols; j++) prev[j] = curr[j];
+  }
+  return prev[b.length];
+}
+
+export interface CompanyCreationInput {
+  company_name: string;
+  domain?: string;
+  linkedin_url?: string;
+  excludeId?: string;
+}
+
+export interface CompanyCreationGate {
+  hard: Company | null;
+  hardReason: "domain" | "linkedin" | null;
+  suggestions: Company[];
+}
+
+/**
+ * Manual-create gate: exact domain/LinkedIn → hard block;
+ * compactName Levenshtein ≤ 2 → soft suggestions (top 5).
+ * Fail-open when pool is empty: returns no matches.
+ */
+export function findCompanyCreationGate(
+  input: CompanyCreationInput,
+  pool: Company[],
+): CompanyCreationGate {
+  const empty: CompanyCreationGate = { hard: null, hardReason: null, suggestions: [] };
+  if (!pool?.length) return empty;
+
+  const excludeId = input.excludeId;
+  const candidates = excludeId ? pool.filter((c) => c.id !== excludeId) : pool;
+
+  const inputRoot = (() => {
+    const raw = (input.domain ?? "").trim();
+    if (!raw) return "";
+    const root = registrableDomain(raw);
+    if (!root || isGenericDomain(root)) return "";
+    return root;
+  })();
+
+  if (inputRoot) {
+    for (const c of candidates) {
+      const existingRoot = registrableDomain(c.domain);
+      if (existingRoot && existingRoot === inputRoot) {
+        return { hard: c, hardReason: "domain", suggestions: [] };
+      }
+    }
+  }
+
+  const inputLi = normalizeLinkedinUrl(input.linkedin_url);
+  if (inputLi) {
+    for (const c of candidates) {
+      if (normalizeLinkedinUrl(c.linkedin_url) === inputLi) {
+        return { hard: c, hardReason: "linkedin", suggestions: [] };
+      }
+    }
+  }
+
+  const needle = compactName(input.company_name);
+  if (needle.length < 3) return empty;
+
+  const scored: { company: Company; dist: number }[] = [];
+  for (const c of candidates) {
+    const hay = compactName(c.company_name);
+    if (hay.length < 3) continue;
+    const dist = levenshtein(needle, hay);
+    if (dist <= 2) scored.push({ company: c, dist });
+  }
+  scored.sort((a, b) => a.dist - b.dist || a.company.company_name.localeCompare(b.company.company_name));
+  const seen = new Set<string>();
+  const suggestions: Company[] = [];
+  for (const s of scored) {
+    if (seen.has(s.company.id)) continue;
+    seen.add(s.company.id);
+    suggestions.push(s.company);
+    if (suggestions.length >= 5) break;
+  }
+  return { hard: null, hardReason: null, suggestions };
+}
+
+export interface ContactCreationInput {
+  email?: string;
+  linkedin?: string;
+  /** When editing, ignore the contact currently being edited. */
+  ignoreLinkedin?: string;
+  ignoreEmail?: string;
+}
+
+export interface ContactHardMatch {
+  contact: Contact;
+  company: Company;
+  reason: "email" | "linkedin";
+}
+
+export interface ContactCreationGate {
+  hard: ContactHardMatch | null;
+}
+
+/**
+ * Contact create gate: exact email or LinkedIn across the whole CRM → hard block.
+ * No fuzzy name matching for people.
+ */
+export function findContactCreationGate(
+  input: ContactCreationInput,
+  companies: Company[],
+): ContactCreationGate {
+  if (!companies?.length) return { hard: null };
+
+  const email = (input.email ?? "").trim().toLowerCase();
+  const ignoreEmail = (input.ignoreEmail ?? "").trim().toLowerCase();
+  const linkedin = normalizeLinkedinUrl(input.linkedin);
+  const ignoreLi = normalizeLinkedinUrl(input.ignoreLinkedin);
+
+  if (email && email !== ignoreEmail) {
+    for (const company of companies) {
+      for (const contact of company.contacts ?? []) {
+        const ce = (contact.email ?? "").trim().toLowerCase();
+        if (ce && ce === email) {
+          return { hard: { contact, company, reason: "email" } };
+        }
+      }
+    }
+  }
+
+  if (linkedin && linkedin !== ignoreLi) {
+    for (const company of companies) {
+      for (const contact of company.contacts ?? []) {
+        if (normalizeLinkedinUrl(contact.linkedin) === linkedin) {
+          return { hard: { contact, company, reason: "linkedin" } };
+        }
+      }
+    }
+  }
+
+  return { hard: null };
 }
 
 // Tokens that don't contribute to identifying a company (corp suffixes, event-tags, generic words)

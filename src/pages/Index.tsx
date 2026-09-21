@@ -79,6 +79,7 @@ export default function Index() {
             onFitChange={setFit}
             onAddContact={addContact}
             onRemoveContact={removeContact}
+            onOpenCompany={(c) => setDetailCompany(c)}
             onDelete={() => {
               if (currentDetail) {
                 deleteCompanies([currentDetail.id]);
@@ -90,7 +91,16 @@ export default function Index() {
         </>
       )}
 
-      <AddCompanyDialog open={addOpen} onOpenChange={setAddOpen} onAdd={addCompanies} existingCompanies={allCompanies} />
+      <AddCompanyDialog
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        onAdd={addCompanies}
+        existingCompanies={allCompanies}
+        onOpenExisting={(c) => {
+          setAddOpen(false);
+          setDetailCompany(c);
+        }}
+      />
 
       <ScheduleMeetingDialog
         open={!!scheduleFor}

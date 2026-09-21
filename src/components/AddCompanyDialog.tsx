@@ -10,13 +10,15 @@ import { Company, IcpFit, FIT_OPTIONS, FIT_LABELS, Sdr, SDR_OPTIONS, Angle, Comp
 import { Upload, Plus, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { detectBatchDuplicates, findDuplicate, DuplicateMatch } from "@/lib/duplicates";
+import { detectBatchDuplicates, findCompanyCreationGate, DuplicateMatch } from "@/lib/duplicates";
 
 interface Props {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   onAdd: (companies: Company[]) => void;
   existingCompanies: Company[];
+  /** Open the detail panel for an existing company (hard/soft gate). */
+  onOpenExisting?: (company: Company) => void;
 }
 
 function todayStr() {
@@ -95,12 +97,15 @@ function rowToCompany(row: Record<string, unknown>): Company | null {
   };
 }
 
-export function AddCompanyDialog({ open, onOpenChange, onAdd, existingCompanies }: Props) {
+export function AddCompanyDialog({ open, onOpenChange, onAdd, existingCompanies, onOpenExisting }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [pendingDupes, setPendingDupes] = useState<DuplicateMatch[]>([]);
   const [pendingClean, setPendingClean] = useState<Company[]>([]);
   const [skipIds, setSkipIds] = useState<Set<string>>(new Set());
   const [submitted, setSubmitted] = useState(false);
+  const [hardBlock, setHardBlock] = useState<{ company: Company; reason: "domain" | "linkedin" } | null>(null);
+  const [suggestions, setSuggestions] = useState<Company[]>([]);
+  const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
   const [form, setForm] = useState({
     company_name: "",
     domain: "",
@@ -115,15 +120,58 @@ export function AddCompanyDialog({ open, onOpenChange, onAdd, existingCompanies 
     source: "outbound" as CompanySource,
   });
 
-  const reset = () => setForm({
-    company_name: "", domain: "", industry: "", country: "Colombia",
-    size: "MID", linkedin_url: "", icp_fit: "MID", sdr: "", reasoning: "", experiencia_target: "", source: "outbound",
-  });
+  const reset = () => {
+    setForm({
+      company_name: "", domain: "", industry: "", country: "Colombia",
+      size: "MID", linkedin_url: "", icp_fit: "MID", sdr: "", reasoning: "", experiencia_target: "", source: "outbound",
+    });
+    setHardBlock(null);
+    setSuggestions([]);
+    setDismissedIds(new Set());
+    setSubmitted(false);
+  };
+
+  const runCreationGate = (next = form) => {
+    try {
+      const gate = findCompanyCreationGate(
+        {
+          company_name: next.company_name,
+          domain: next.domain,
+          linkedin_url: next.linkedin_url,
+        },
+        existingCompanies,
+      );
+      if (gate.hard) {
+        setHardBlock({ company: gate.hard, reason: gate.hardReason ?? "domain" });
+        setSuggestions([]);
+        return gate;
+      }
+      setHardBlock(null);
+      setSuggestions(gate.suggestions.filter((c) => !dismissedIds.has(c.id)));
+      return gate;
+    } catch (e) {
+      console.error("duplicate gate failed", e);
+      setHardBlock(null);
+      setSuggestions([]);
+      return { hard: null, hardReason: null, suggestions: [] as Company[] };
+    }
+  };
+
+  const openExisting = (company: Company) => {
+    onOpenChange(false);
+    reset();
+    onOpenExisting?.(company);
+  };
 
   const handleManualAdd = () => {
     setSubmitted(true);
     if (!form.company_name.trim()) {
       toast.error("El nombre de la empresa es obligatorio");
+      return;
+    }
+    const gate = runCreationGate(form);
+    if (gate.hard) {
+      setHardBlock({ company: gate.hard, reason: gate.hardReason ?? "domain" });
       return;
     }
     const company: Company = {
@@ -146,17 +194,9 @@ export function AddCompanyDialog({ open, onOpenChange, onAdd, existingCompanies 
       experiencia_target: form.experiencia_target.trim() || null,
       source: form.source,
     };
-    const dup = findDuplicate(company, existingCompanies);
-    if (dup) {
-      setPendingDupes([{ candidate: company, existing: dup.existing, reason: dup.reason }]);
-      setPendingClean([]);
-      setSkipIds(new Set([company.id]));
-      return;
-    }
     onAdd([company]);
     toast.success(`${company.company_name} agregada`);
     reset();
-    setSubmitted(false);
     onOpenChange(false);
   };
 
@@ -281,7 +321,7 @@ export function AddCompanyDialog({ open, onOpenChange, onAdd, existingCompanies 
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(o) => { if (!o) reset(); onOpenChange(o); }}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>Añadir empresas</DialogTitle>
@@ -301,6 +341,7 @@ export function AddCompanyDialog({ open, onOpenChange, onAdd, existingCompanies 
                 <Input
                   value={form.company_name}
                   onChange={(e) => setForm({ ...form, company_name: e.target.value })}
+                  onBlur={() => runCreationGate()}
                   className={cn(submitted && !form.company_name.trim() && "border-destructive ring-1 ring-destructive/30")}
                 />
                 {submitted && !form.company_name.trim() && (
@@ -311,11 +352,76 @@ export function AddCompanyDialog({ open, onOpenChange, onAdd, existingCompanies 
               </div>
               <div>
                 <Label className="text-xs">Dominio</Label>
-                <Input value={form.domain} onChange={(e) => setForm({ ...form, domain: e.target.value })} placeholder="acme.com" />
+                <Input
+                  value={form.domain}
+                  onChange={(e) => setForm({ ...form, domain: e.target.value })}
+                  onBlur={() => runCreationGate()}
+                  placeholder="acme.com"
+                  className={cn(hardBlock?.reason === "domain" && "border-destructive ring-1 ring-destructive/30")}
+                />
+                {hardBlock?.reason === "domain" && (
+                  <div className="mt-1.5 text-xs space-y-1.5">
+                    <p className="text-destructive flex items-start gap-1">
+                      <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
+                      Ya existe {hardBlock.company.company_name} con ese dominio.
+                    </p>
+                    <div className="flex gap-2">
+                      <Button type="button" size="sm" variant="secondary" className="h-7 text-xs" onClick={() => openExisting(hardBlock.company)}>
+                        Abrir empresa existente
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 text-xs"
+                        onClick={() => {
+                          const next = { ...form, domain: "" };
+                          setForm(next);
+                          setHardBlock(null);
+                          runCreationGate(next);
+                        }}
+                      >
+                        Cancelar
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
               <div>
                 <Label className="text-xs">LinkedIn</Label>
-                <Input value={form.linkedin_url} onChange={(e) => setForm({ ...form, linkedin_url: e.target.value })} />
+                <Input
+                  value={form.linkedin_url}
+                  onChange={(e) => setForm({ ...form, linkedin_url: e.target.value })}
+                  onBlur={() => runCreationGate()}
+                  className={cn(hardBlock?.reason === "linkedin" && "border-destructive ring-1 ring-destructive/30")}
+                />
+                {hardBlock?.reason === "linkedin" && (
+                  <div className="mt-1.5 text-xs space-y-1.5">
+                    <p className="text-destructive flex items-start gap-1">
+                      <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
+                      Ya existe {hardBlock.company.company_name} con ese LinkedIn.
+                    </p>
+                    <div className="flex gap-2">
+                      <Button type="button" size="sm" variant="secondary" className="h-7 text-xs" onClick={() => openExisting(hardBlock.company)}>
+                        Abrir empresa existente
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 text-xs"
+                        onClick={() => {
+                          const next = { ...form, linkedin_url: "" };
+                          setForm(next);
+                          setHardBlock(null);
+                          runCreationGate(next);
+                        }}
+                      >
+                        Cancelar
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
               <div>
                 <Label className="text-xs">Industria</Label>
@@ -375,9 +481,48 @@ export function AddCompanyDialog({ open, onOpenChange, onAdd, existingCompanies 
                 </Select>
               </div>
             </div>
+
+            {!hardBlock && suggestions.length > 0 && (
+              <div className="rounded-md border border-score-medium/40 bg-score-medium/10 p-3 space-y-2">
+                <p className="text-xs font-medium text-foreground">¿Puede ser una de estas?</p>
+                <ul className="space-y-2">
+                  {suggestions.map((c) => (
+                    <li key={c.id} className="flex items-start justify-between gap-2 text-xs">
+                      <div className="min-w-0">
+                        <span className="font-medium text-foreground">{c.company_name}</span>
+                        <span className="text-muted-foreground">
+                          {" · "}{c.industry || "—"}
+                          {" · "}SDR: {c.sdr || "—"}
+                        </span>
+                      </div>
+                      <div className="flex gap-1 shrink-0">
+                        <Button type="button" size="sm" variant="secondary" className="h-7 text-xs" onClick={() => openExisting(c)}>
+                          Usar esta
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 text-xs"
+                          onClick={() => {
+                            setDismissedIds((prev) => new Set(prev).add(c.id));
+                            setSuggestions((prev) => prev.filter((x) => x.id !== c.id));
+                          }}
+                        >
+                          No es la misma
+                        </Button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
             <DialogFooter>
               <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-              <Button onClick={handleManualAdd}>Añadir empresa</Button>
+              <Button onClick={handleManualAdd} disabled={!!hardBlock}>
+                {suggestions.length > 0 && !hardBlock ? "Crear empresa" : "Añadir empresa"}
+              </Button>
             </DialogFooter>
           </TabsContent>
 
