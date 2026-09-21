@@ -65,6 +65,7 @@ export type Database = {
         Row: {
           amigos: boolean
           angle: string
+          archived_at: string | null
           company_name: string
           country: string
           created_at: string
@@ -81,12 +82,14 @@ export type Database = {
           size: string
           source: string | null
           status: string
+          status_entered_at: string | null
           unqualified_reason: string | null
           updated_at: string
         }
         Insert: {
           amigos?: boolean
           angle?: string
+          archived_at?: string | null
           company_name: string
           country?: string
           created_at?: string
@@ -103,12 +106,14 @@ export type Database = {
           size?: string
           source?: string | null
           status?: string
+          status_entered_at?: string | null
           unqualified_reason?: string | null
           updated_at?: string
         }
         Update: {
           amigos?: boolean
           angle?: string
+          archived_at?: string | null
           company_name?: string
           country?: string
           created_at?: string
@@ -125,6 +130,7 @@ export type Database = {
           size?: string
           source?: string | null
           status?: string
+          status_entered_at?: string | null
           unqualified_reason?: string | null
           updated_at?: string
         }
@@ -132,6 +138,7 @@ export type Database = {
       }
       contacts: {
         Row: {
+          archived_at: string | null
           company_id: string
           contacted_from: string[] | null
           created_at: string
@@ -139,10 +146,15 @@ export type Database = {
           id: string
           linkedin: string
           name: string
+          notes: string
           phone: string | null
           role: string
+          sdr: string | null
+          status: string | null
+          status_entered_at: string | null
         }
         Insert: {
+          archived_at?: string | null
           company_id: string
           contacted_from?: string[] | null
           created_at?: string
@@ -150,10 +162,15 @@ export type Database = {
           id?: string
           linkedin: string
           name: string
+          notes?: string
           phone?: string | null
           role?: string
+          sdr?: string | null
+          status?: string | null
+          status_entered_at?: string | null
         }
         Update: {
+          archived_at?: string | null
           company_id?: string
           contacted_from?: string[] | null
           created_at?: string
@@ -161,8 +178,12 @@ export type Database = {
           id?: string
           linkedin?: string
           name?: string
+          notes?: string
           phone?: string | null
           role?: string
+          sdr?: string | null
+          status?: string | null
+          status_entered_at?: string | null
         }
         Relationships: [
           {
@@ -427,6 +448,8 @@ export type Database = {
           sponsor_icp: string | null
           sponsor_pain: string | null
           stage_id: string
+          circleback_url: string | null
+          contact_role: string | null
           updated_at: string
           value: number
         }
@@ -458,6 +481,8 @@ export type Database = {
           sponsor_icp?: string | null
           sponsor_pain?: string | null
           stage_id: string
+          circleback_url?: string | null
+          contact_role?: string | null
           updated_at?: string
           value?: number
         }
@@ -489,6 +514,8 @@ export type Database = {
           sponsor_icp?: string | null
           sponsor_pain?: string | null
           stage_id?: string
+          circleback_url?: string | null
+          contact_role?: string | null
           updated_at?: string
           value?: number
         }
@@ -611,6 +638,7 @@ export type Database = {
           meet_link: string | null
           meeting_ends_at: string | null
           notes: string
+          origin: string | null
           outcome: string | null
           outcome_reason: string | null
           scheduled_at: string
@@ -633,6 +661,7 @@ export type Database = {
           meet_link?: string | null
           meeting_ends_at?: string | null
           notes?: string
+          origin?: string | null
           outcome?: string | null
           outcome_reason?: string | null
           scheduled_at: string
@@ -655,6 +684,7 @@ export type Database = {
           meet_link?: string | null
           meeting_ends_at?: string | null
           notes?: string
+          origin?: string | null
           outcome?: string | null
           outcome_reason?: string | null
           scheduled_at?: string
@@ -873,6 +903,215 @@ export type Database = {
           pipe_goal?: number
           meeting_goal?: number
           created_at?: string
+        }
+        Relationships: []
+      }
+      pipeline_stages: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          is_lost: boolean
+          is_won: boolean
+          key: string
+          kind: string
+          label: string
+          pipeline: string
+          probability: number
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_lost?: boolean
+          is_won?: boolean
+          key: string
+          kind?: string
+          label: string
+          pipeline: string
+          probability?: number
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_lost?: boolean
+          is_won?: boolean
+          key?: string
+          kind?: string
+          label?: string
+          pipeline?: string
+          probability?: number
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      catalog_options: {
+        Row: {
+          catalog_key: string
+          code: string
+          created_at: string
+          id: string
+          is_active: boolean
+          label: string
+          requires_note: boolean
+          sort_order: number
+        }
+        Insert: {
+          catalog_key: string
+          code: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label: string
+          requires_note?: boolean
+          sort_order?: number
+        }
+        Update: {
+          catalog_key?: string
+          code?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label?: string
+          requires_note?: boolean
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      checklist_items: {
+        Row: {
+          created_at: string
+          field_type: string
+          id: string
+          is_active: boolean
+          key: string
+          label: string
+          options: Json
+          sort_order: number
+          stage_id: string
+        }
+        Insert: {
+          created_at?: string
+          field_type?: string
+          id?: string
+          is_active?: boolean
+          key: string
+          label: string
+          options?: Json
+          sort_order?: number
+          stage_id: string
+        }
+        Update: {
+          created_at?: string
+          field_type?: string
+          id?: string
+          is_active?: boolean
+          key?: string
+          label?: string
+          options?: Json
+          sort_order?: number
+          stage_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checklist_items_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "pipeline_stages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      touches: {
+        Row: {
+          account_used: string | null
+          channel: string | null
+          company_id: string
+          contact_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          note: string | null
+          sdr: string | null
+          touched_at: string
+        }
+        Insert: {
+          account_used?: string | null
+          channel?: string | null
+          company_id: string
+          contact_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          note?: string | null
+          sdr?: string | null
+          touched_at?: string
+        }
+        Update: {
+          account_used?: string | null
+          channel?: string | null
+          company_id?: string
+          contact_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          note?: string | null
+          sdr?: string | null
+          touched_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "touches_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "touches_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      audit_log: {
+        Row: {
+          actor_email: string | null
+          actor_id: string | null
+          created_at: string
+          field: string
+          id: string
+          new_value: string | null
+          old_value: string | null
+          record_id: string
+          table_name: string
+        }
+        Insert: {
+          actor_email?: string | null
+          actor_id?: string | null
+          created_at?: string
+          field: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          record_id: string
+          table_name: string
+        }
+        Update: {
+          actor_email?: string | null
+          actor_id?: string | null
+          created_at?: string
+          field?: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          record_id?: string
+          table_name?: string
         }
         Relationships: []
       }

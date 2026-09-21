@@ -18,6 +18,7 @@ import { EventsDataProvider } from "@/hooks/useEventsData";
 import { GlobalHeader } from "@/components/GlobalHeader";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute, AdminRoute } from "@/components/ProtectedRoute";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 const queryClient = new QueryClient();
 
@@ -34,6 +35,7 @@ const App = () => (
               path="/*"
               element={
                 <ProtectedRoute>
+                  <ErrorBoundary>
                   <CompanyDataProvider>
                     <EventsDataProvider>
                       <GlobalHeader />
@@ -57,6 +59,7 @@ const App = () => (
                       </Routes>
                     </EventsDataProvider>
                   </CompanyDataProvider>
+                  </ErrorBoundary>
                 </ProtectedRoute>
               }
             />

@@ -188,13 +188,18 @@ function useCompanyDataInternal() {
     (async () => {
       // Paginate to bypass Supabase's 1000-row cap.
       const fetchAll = async <T,>(
-        build: (from: number, to: number) => PromiseLike<{ data: unknown }>,
+        label: string,
+        build: (from: number, to: number) => PromiseLike<{ data: unknown; error: { message: string } | null }>,
       ): Promise<T[]> => {
         const pageSize = 1000;
         let offset = 0;
         const all: T[] = [];
         while (true) {
-          const { data } = await build(offset, offset + pageSize - 1);
+          const { data, error } = await build(offset, offset + pageSize - 1);
+          if (error) {
+            console.error(`[useCompanyData] fetchAll ${label} failed`, error.message);
+            break;
+          }
           const batch = (data ?? []) as T[];
           all.push(...batch);
           if (batch.length < pageSize) break;
@@ -203,20 +208,20 @@ function useCompanyDataInternal() {
         return all;
       };
       const [cRows, kRows, tRows, aRows, mRows, gRows] = await Promise.all([
-        fetchAll<CompanyRow>((from, to) =>
+        fetchAll<CompanyRow>("companies", (from, to) =>
           supabase.from("companies").select("*").order("created_at", { ascending: false }).range(from, to)),
-        fetchAll<ContactRow>((from, to) =>
+        fetchAll<ContactRow>("contacts", (from, to) =>
           supabase.from("contacts").select("*").range(from, to)),
-        fetchAll<TaskRow>((from, to) =>
+        fetchAll<TaskRow>("tasks", (from, to) =>
           supabase.from("tasks").select("*").range(from, to)),
-        fetchAll<ActivityRow>((from, to) =>
+        fetchAll<ActivityRow>("activities", (from, to) =>
           supabase.from("activities").select("*").order("created_at", { ascending: false }).range(from, to)),
-        fetchAll<MeetingRow>((from, to) =>
+        fetchAll<MeetingRow>("meetings", (from, to) =>
           supabase.from("meetings").select("*").order("scheduled_at", { ascending: false }).range(from, to)),
-        fetchAll<GoalRow>((from, to) =>
+        fetchAll<GoalRow>("meeting_goals", (from, to) =>
           supabase.from("meeting_goals").select("*").range(from, to)),
       ]);
-      const sRows = await fetchAll<SequenceRow>((from, to) =>
+      const sRows = await fetchAll<SequenceRow>("prospection_sequences", (from, to) =>
         supabase.from("prospection_sequences").select("*").range(from, to));
       if (cancelled) return;
       const contactsByCompany = new Map<string, Contact[]>();
