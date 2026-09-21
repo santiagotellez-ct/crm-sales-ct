@@ -100,6 +100,18 @@ export interface Contact {
   sdr?: Sdr | null;
 }
 
+/** Row from public.touches — contact outreach history. */
+export interface ContactTouch {
+  id: string;
+  contact_id: string;
+  company_id: string;
+  touched_at: string;
+  channel: string | null;
+  account_used: string | null;
+  sdr: string | null;
+  note: string | null;
+}
+
 export interface Company {
   id: string;
   company_name: string;

@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Company, Contact, ContactedFrom, CONTACTED_FROM_OPTIONS, Sdr } from "@/types/company";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Company, Contact, ContactTouch, ContactedFrom, CONTACTED_FROM_OPTIONS, Sdr } from "@/types/company";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Linkedin, Loader2, Sparkles, Trash2, Plus, Mail, Phone, Pencil, Check, X, AlertTriangle, Hand } from "lucide-react";
@@ -8,6 +8,9 @@ import { toast } from "sonner";
 import { findContactCreationGate } from "@/lib/duplicates";
 import { cn } from "@/lib/utils";
 import { LogTouchDialog, TOUCH_STAGE_LABELS } from "@/components/LogTouchDialog";
+import { useCatalog } from "@/hooks/useCatalog";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 
 interface Props {
   companyId: string;
@@ -22,8 +25,18 @@ interface Props {
   onApplyTouch?: (
     contactId: string,
     payload: { channel?: string; account_used?: string; sdr?: string; note?: string },
-  ) => Promise<{ from_status?: string; to_status?: string; advanced?: boolean } | null | undefined>;
+  ) => Promise<{
+    touch_id?: string;
+    from_status?: string;
+    to_status?: string;
+    advanced?: boolean;
+  } | null | undefined>;
   compact?: boolean;
+}
+
+function catalogLabel(options: { code: string; label: string }[], code: string | null | undefined) {
+  if (!code) return null;
+  return options.find((o) => o.code === code)?.label ?? code;
 }
 
 export function ContactsPanel({
@@ -49,11 +62,55 @@ export function ContactsPanel({
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState<Contact | null>(null);
   const [touchFor, setTouchFor] = useState<Contact | null>(null);
+  const [touches, setTouches] = useState<ContactTouch[]>([]);
+  const [touchesLoading, setTouchesLoading] = useState(false);
+  const [expandedTouchIds, setExpandedTouchIds] = useState<Set<string>>(new Set());
   const [hardBlock, setHardBlock] = useState<{
     contact: Contact;
     company: Company;
     reason: "email" | "linkedin";
   } | null>(null);
+
+  const { options: channelOptions } = useCatalog("channel");
+  const { options: seatOptions } = useCatalog("linkedin_seat");
+
+  const loadTouches = useCallback(async () => {
+    setTouchesLoading(true);
+    const { data, error } = await supabase
+      .from("touches")
+      .select("id, contact_id, company_id, touched_at, channel, account_used, sdr, note")
+      .eq("company_id", companyId)
+      .order("touched_at", { ascending: false });
+    setTouchesLoading(false);
+    if (error) {
+      console.error("load touches failed", error.message);
+      return;
+    }
+    setTouches((data ?? []) as ContactTouch[]);
+  }, [companyId]);
+
+  useEffect(() => {
+    void loadTouches();
+  }, [loadTouches]);
+
+  const touchesByContact = useMemo(() => {
+    const m = new Map<string, ContactTouch[]>();
+    for (const t of touches) {
+      const list = m.get(t.contact_id) ?? [];
+      list.push(t);
+      m.set(t.contact_id, list);
+    }
+    return m;
+  }, [touches]);
+
+  const toggleTouchHistory = (contactId: string) => {
+    setExpandedTouchIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(contactId)) next.delete(contactId);
+      else next.add(contactId);
+      return next;
+    });
+  };
 
   const reset = () => {
     setLinkedinUrl(""); setName(""); setRole(""); setEmail(""); setPhone(""); setContactedFrom([]); setShowForm(false);
@@ -246,69 +303,122 @@ export function ContactsPanel({
             );
           }
           return (
-          <div key={c.id ?? c.linkedin} className="bg-muted/50 rounded-lg p-3 flex items-start justify-between gap-2">
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium text-foreground truncate">{c.name || "(sin nombre)"}</p>
-              {c.role && <p className="text-xs text-muted-foreground truncate">{c.role}</p>}
-              {c.status && (
-                <p className="text-[11px] text-muted-foreground mt-0.5">
-                  Etapa: {TOUCH_STAGE_LABELS[c.status] ?? c.status}
-                </p>
-              )}
-              {c.contacted_from && c.contacted_from.length > 0 && (
-                <div className="flex flex-wrap gap-1 mt-1">
-                  {c.contacted_from.map((cf) => (
-                    <span key={cf} className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-primary/10 text-primary border border-primary/30">
-                      desde {cf}
-                    </span>
-                  ))}
+          <div key={c.id ?? c.linkedin} className="bg-muted/50 rounded-lg p-3 space-y-2">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-foreground truncate">{c.name || "(sin nombre)"}</p>
+                {c.role && <p className="text-xs text-muted-foreground truncate">{c.role}</p>}
+                {c.status && (
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    Etapa: {TOUCH_STAGE_LABELS[c.status] ?? c.status}
+                  </p>
+                )}
+                {c.contacted_from && c.contacted_from.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {c.contacted_from.map((cf) => (
+                      <span key={cf} className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-primary/10 text-primary border border-primary/30">
+                        desde {cf}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <div className="flex items-center gap-3 mt-1 flex-wrap">
+                  <a href={c.linkedin} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-primary hover:underline">
+                    <Linkedin className="h-3 w-3" />LinkedIn
+                  </a>
+                  {c.email && (
+                    <a href={`mailto:${c.email}`} className="inline-flex items-center gap-1 text-xs text-primary hover:underline break-all">
+                      <Mail className="h-3 w-3" />{c.email}
+                    </a>
+                  )}
+                  {c.phone && (
+                    <a href={`tel:${c.phone}`} className="inline-flex items-center gap-1 text-xs text-primary hover:underline">
+                      <Phone className="h-3 w-3" />{c.phone}
+                    </a>
+                  )}
                 </div>
-              )}
-              <div className="flex items-center gap-3 mt-1 flex-wrap">
-                <a href={c.linkedin} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-primary hover:underline">
-                  <Linkedin className="h-3 w-3" />LinkedIn
-                </a>
-                {c.email && (
-                  <a href={`mailto:${c.email}`} className="inline-flex items-center gap-1 text-xs text-primary hover:underline break-all">
-                    <Mail className="h-3 w-3" />{c.email}
-                  </a>
+              </div>
+              <div className="flex items-center gap-0.5">
+                {onApplyTouch && (
+                  <button
+                    onClick={() => setTouchFor(c)}
+                    className="p-1 rounded hover:bg-background/60 text-muted-foreground hover:text-primary transition-colors"
+                    aria-label="Registrar touch"
+                    title="Registrar touch"
+                    disabled={!c.id}
+                  >
+                    <Hand className="h-3.5 w-3.5" />
+                  </button>
                 )}
-                {c.phone && (
-                  <a href={`tel:${c.phone}`} className="inline-flex items-center gap-1 text-xs text-primary hover:underline">
-                    <Phone className="h-3 w-3" />{c.phone}
-                  </a>
+                {onUpdate && (
+                  <button
+                    onClick={() => { setEditingKey(c.linkedin); setEditDraft({ ...c }); }}
+                    className="p-1 rounded hover:bg-background/60 text-muted-foreground hover:text-primary transition-colors"
+                    aria-label="Editar contacto"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
                 )}
+                <button
+                  onClick={() => onRemove(companyId, c.linkedin)}
+                  className="p-1 rounded hover:bg-background/60 text-muted-foreground hover:text-score-low transition-colors"
+                  aria-label="Eliminar contacto"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
               </div>
             </div>
-            <div className="flex items-center gap-0.5">
-              {onApplyTouch && (
-                <button
-                  onClick={() => setTouchFor(c)}
-                  className="p-1 rounded hover:bg-background/60 text-muted-foreground hover:text-primary transition-colors"
-                  aria-label="Registrar touch"
-                  title="Registrar touch"
-                  disabled={!c.id}
-                >
-                  <Hand className="h-3.5 w-3.5" />
-                </button>
-              )}
-              {onUpdate && (
-                <button
-                  onClick={() => { setEditingKey(c.linkedin); setEditDraft({ ...c }); }}
-                  className="p-1 rounded hover:bg-background/60 text-muted-foreground hover:text-primary transition-colors"
-                  aria-label="Editar contacto"
-                >
-                  <Pencil className="h-3.5 w-3.5" />
-                </button>
-              )}
-              <button
-                onClick={() => onRemove(companyId, c.linkedin)}
-                className="p-1 rounded hover:bg-background/60 text-muted-foreground hover:text-score-low transition-colors"
-                aria-label="Eliminar contacto"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
-            </div>
+
+            {c.id && (() => {
+              const history = touchesByContact.get(c.id) ?? [];
+              const showAll = expandedTouchIds.has(c.id);
+              const visible = showAll || history.length <= 3 ? history : history.slice(0, 3);
+              if (history.length === 0 && !touchesLoading) {
+                return (
+                  <p className="text-[11px] text-muted-foreground/80 italic pl-0.5">Sin touches registrados</p>
+                );
+              }
+              if (history.length === 0) return null;
+              return (
+                <div className="border-t border-border/60 pt-2 space-y-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-[11px] font-medium text-muted-foreground">
+                      Touches ({history.length})
+                    </p>
+                    {history.length > 3 && (
+                      <button
+                        type="button"
+                        onClick={() => toggleTouchHistory(c.id!)}
+                        className="text-[11px] text-primary hover:underline"
+                      >
+                        {showAll ? "Ver menos" : "Ver todos"}
+                      </button>
+                    )}
+                  </div>
+                  <ul className="space-y-1.5">
+                    {visible.map((t) => {
+                      const channel = catalogLabel(channelOptions, t.channel);
+                      const seat = catalogLabel(seatOptions, t.account_used);
+                      const when = (() => {
+                        try {
+                          return format(new Date(t.touched_at), "d MMM yyyy · HH:mm", { locale: es });
+                        } catch {
+                          return t.touched_at;
+                        }
+                      })();
+                      const meta = [channel, seat, t.sdr].filter(Boolean).join(" · ");
+                      return (
+                        <li key={t.id} className="text-[11px] text-muted-foreground leading-snug">
+                          <span className="text-foreground/80 font-medium">{when}</span>
+                          {meta ? <span> · {meta}</span> : null}
+                          {t.note ? <span className="block text-foreground/70 mt-0.5">{t.note}</span> : null}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              );
+            })()}
           </div>
           );
         })}
@@ -322,7 +432,24 @@ export function ContactsPanel({
           onOpenChange={(o) => { if (!o) setTouchFor(null); }}
           onSubmit={async (payload) => {
             if (!touchFor?.id) return null;
-            return onApplyTouch(touchFor.id, payload);
+            const result = await onApplyTouch(touchFor.id, payload);
+            if (result?.touch_id) {
+              const row: ContactTouch = {
+                id: result.touch_id,
+                contact_id: touchFor.id,
+                company_id: companyId,
+                touched_at: new Date().toISOString(),
+                channel: payload.channel ?? null,
+                account_used: payload.account_used ?? null,
+                sdr: payload.sdr ?? null,
+                note: payload.note ?? null,
+              };
+              setTouches((prev) => [row, ...prev.filter((t) => t.id !== row.id)]);
+              setExpandedTouchIds((prev) => new Set(prev).add(touchFor.id!));
+            } else {
+              await loadTouches();
+            }
+            return result;
           }}
         />
       )}
