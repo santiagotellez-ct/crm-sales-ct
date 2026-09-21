@@ -307,8 +307,15 @@ CREATE TRIGGER audit_meetings_changes
   AFTER UPDATE ON public.meetings
   FOR EACH ROW EXECUTE FUNCTION public.audit_row_changes();
 
--- ─── Backfill (batched). Gate for kanban cutover: COUNT status IS NULL = 0. ──
+-- ─── Backfill ───────────────────────────────────────────────────────────────
+-- Gate for kanban cutover: COUNT status IS NULL = 0.
 -- Not a gate for apply_touch (COALESCE handles NULL).
+--
+-- Disable audit triggers for the backfill window so a one-shot / multi-batch
+-- UPDATE does not flood audit_log / WAL / Realtime. Re-enable immediately after.
+
+ALTER TABLE public.companies DISABLE TRIGGER audit_companies_changes;
+ALTER TABLE public.contacts DISABLE TRIGGER audit_contacts_changes;
 
 UPDATE public.companies c
 SET status_entered_at = COALESCE(
@@ -323,19 +330,40 @@ SET status_entered_at = COALESCE(
 )
 WHERE c.status_entered_at IS NULL;
 
--- Copy company stage/sdr onto contacts (bridge until per-contact touches).
-UPDATE public.contacts ct
-SET
-  status = COALESCE(c.status, 'por_contactar'),
-  status_entered_at = COALESCE(c.status_entered_at, c.created_at, now()),
-  sdr = COALESCE(ct.sdr, c.sdr)
-FROM public.companies c
-WHERE ct.company_id = c.id
-  AND ct.status IS NULL;
+-- Contacts in batches of 500 to keep locks short (even without audit).
+DO $$
+DECLARE
+  batch_size int := 500;
+  updated int;
+BEGIN
+  LOOP
+    WITH target AS (
+      SELECT ct.id AS contact_id
+      FROM public.contacts ct
+      WHERE ct.status IS NULL
+      ORDER BY ct.id
+      LIMIT batch_size
+    )
+    UPDATE public.contacts ct
+    SET
+      status = COALESCE(c.status, 'por_contactar'),
+      status_entered_at = COALESCE(c.status_entered_at, c.created_at, now()),
+      sdr = COALESCE(ct.sdr, c.sdr)
+    FROM target t
+    LEFT JOIN public.companies c ON c.id = ct.company_id
+    WHERE ct.id = t.contact_id;
 
--- Any contact without a company match (should not happen) still gets a start value.
+    GET DIAGNOSTICS updated = ROW_COUNT;
+    EXIT WHEN updated = 0;
+  END LOOP;
+END $$;
+
+-- Orphans / missing company match
 UPDATE public.contacts
 SET
   status = 'por_contactar',
   status_entered_at = COALESCE(status_entered_at, created_at, now())
 WHERE status IS NULL;
+
+ALTER TABLE public.contacts ENABLE TRIGGER audit_contacts_changes;
+ALTER TABLE public.companies ENABLE TRIGGER audit_companies_changes;
